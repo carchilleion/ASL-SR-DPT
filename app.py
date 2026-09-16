@@ -1142,18 +1142,244 @@ def generate_team_report(team_name, raw_csv_path, report_path, config, config_ha
 def main():
     st.set_page_config(
         page_title="ASL-SR-DPT Pilot Benchmark",
-        page_icon="🔬",
+        page_icon=None,
         layout="wide",
         initial_sidebar_state="expanded",
     )
 
-    # Custom styling
+    # Glass Minimalism styling
     st.markdown("""
         <style>
-            .main-title { font-size: 2.1rem; font-weight: 700; color: #1E3A8A; margin-bottom: 0.2rem; }
-            .sub-title { font-size: 1.05rem; color: #4B5563; margin-bottom: 1.5rem; }
-            .card { background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
-            .metric-badge { background-color: #DBEAFE; color: #1E40AF; padding: 4px 8px; border-radius: 4px; font-weight: 600; }
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+            html, body, [class*="st-"] {
+                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            }
+
+            /* Header Typography */
+            .main-title {
+                font-size: 1.95rem;
+                font-weight: 700;
+                letter-spacing: -0.035em;
+                color: #0f172a;
+                margin-bottom: 0.2rem;
+            }
+            .sub-title {
+                font-size: 0.92rem;
+                font-weight: 400;
+                letter-spacing: -0.01em;
+                color: #64748b;
+                margin-bottom: 1.5rem;
+                line-height: 1.4;
+            }
+
+            /* Frosted Glass Workload Bar */
+            .workload-bar {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                gap: 18px;
+                background: rgba(255, 255, 255, 0.65);
+                backdrop-filter: blur(16px) saturate(180%);
+                -webkit-backdrop-filter: blur(16px) saturate(180%);
+                border: 1px solid rgba(226, 232, 240, 0.8);
+                border-radius: 12px;
+                padding: 14px 20px;
+                margin-bottom: 22px;
+                box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.03);
+            }
+            .workload-col {
+                display: flex;
+                flex-direction: column;
+                gap: 3px;
+            }
+            .workload-label {
+                font-size: 0.7rem;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.06em;
+                color: #94a3b8;
+            }
+            .workload-value {
+                font-size: 0.88rem;
+                font-weight: 600;
+                color: #1e293b;
+            }
+            .workload-divider {
+                height: 30px;
+                width: 1px;
+                background: rgba(226, 232, 240, 0.8);
+            }
+
+            /* Glass Pill Badges */
+            .glass-pill {
+                display: inline-flex;
+                align-items: center;
+                padding: 2px 9px;
+                border-radius: 6px;
+                font-size: 0.78rem;
+                font-weight: 600;
+                letter-spacing: 0.02em;
+                background: rgba(37, 99, 235, 0.08);
+                color: #1d4ed8;
+                border: 1px solid rgba(37, 99, 235, 0.18);
+            }
+
+            /* Sidebar Glass Panel */
+            .glass-panel {
+                background: rgba(255, 255, 255, 0.5);
+                backdrop-filter: blur(12px);
+                -webkit-backdrop-filter: blur(12px);
+                border: 1px solid rgba(226, 232, 240, 0.7);
+                border-radius: 10px;
+                padding: 12px 14px;
+                margin-bottom: 14px;
+            }
+
+            /* Metric Containers Override */
+            div[data-testid="stMetric"] {
+                background: rgba(255, 255, 255, 0.55) !important;
+                backdrop-filter: blur(14px) saturate(180%) !important;
+                -webkit-backdrop-filter: blur(14px) saturate(180%) !important;
+                border: 1px solid rgba(226, 232, 240, 0.8) !important;
+                border-radius: 12px !important;
+                padding: 14px 18px !important;
+                box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.02) !important;
+            }
+            div[data-testid="stMetricLabel"] p {
+                font-size: 0.74rem !important;
+                font-weight: 600 !important;
+                text-transform: uppercase !important;
+                letter-spacing: 0.05em !important;
+                color: #64748b !important;
+            }
+            div[data-testid="stMetricValue"] {
+                font-weight: 700 !important;
+                color: #0f172a !important;
+                letter-spacing: -0.02em !important;
+            }
+
+            /* Glass Tabs */
+            div[data-testid="stTabs"] [data-baseweb="tab-list"] {
+                background: rgba(241, 245, 249, 0.65) !important;
+                backdrop-filter: blur(10px) !important;
+                border-radius: 10px !important;
+                padding: 4px !important;
+                gap: 4px !important;
+                border: 1px solid rgba(226, 232, 240, 0.8) !important;
+                margin-bottom: 16px !important;
+            }
+            div[data-testid="stTabs"] [data-baseweb="tab"] {
+                border-radius: 8px !important;
+                padding: 8px 16px !important;
+                font-size: 0.86rem !important;
+                font-weight: 500 !important;
+                color: #475569 !important;
+                border: none !important;
+                background: transparent !important;
+                transition: all 0.15s ease !important;
+            }
+            div[data-testid="stTabs"] [aria-selected="true"] {
+                background: rgba(255, 255, 255, 0.95) !important;
+                color: #0f172a !important;
+                font-weight: 600 !important;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+            }
+
+            /* Glass Status Cards (Execution & Progress) */
+            .glass-status-card {
+                background: rgba(255, 255, 255, 0.75);
+                backdrop-filter: blur(16px) saturate(180%);
+                -webkit-backdrop-filter: blur(16px) saturate(180%);
+                border: 1px solid rgba(226, 232, 240, 0.85);
+                border-left: 3px solid #2563eb;
+                border-radius: 10px;
+                padding: 14px 18px;
+                margin-bottom: 14px;
+                box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.02);
+            }
+            .glass-status-title {
+                font-size: 0.95rem;
+                font-weight: 600;
+                color: #1e293b;
+                letter-spacing: -0.01em;
+            }
+            .glass-status-meta {
+                margin-top: 5px;
+                font-size: 0.86rem;
+                color: #475569;
+            }
+            .glass-status-detail {
+                margin-top: 4px;
+                font-size: 0.8rem;
+                color: #64748b;
+            }
+
+            /* Clean Expanders */
+            div[data-testid="stExpander"] {
+                background: rgba(255, 255, 255, 0.45) !important;
+                backdrop-filter: blur(10px) !important;
+                border: 1px solid rgba(226, 232, 240, 0.7) !important;
+                border-radius: 10px !important;
+                margin-bottom: 12px !important;
+                box-shadow: 0 2px 10px -2px rgba(0, 0, 0, 0.02) !important;
+            }
+            div[data-testid="stExpander"] summary {
+                font-weight: 600 !important;
+                font-size: 0.9rem !important;
+                color: #1e293b !important;
+            }
+
+            /* Minimal Buttons */
+            div.stButton > button {
+                border-radius: 8px !important;
+                font-weight: 500 !important;
+                font-size: 0.88rem !important;
+                letter-spacing: 0.01em !important;
+            }
+
+            /* Dark Theme Adaptations */
+            @media (prefers-color-scheme: dark) {
+                .main-title { color: #f8fafc !important; }
+                .sub-title { color: #94a3b8 !important; }
+                .workload-bar {
+                    background: rgba(30, 41, 59, 0.65) !important;
+                    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+                    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.25) !important;
+                }
+                .workload-value { color: #f1f5f9 !important; }
+                .workload-divider { background: rgba(255, 255, 255, 0.08) !important; }
+                .glass-panel {
+                    background: rgba(30, 41, 59, 0.5) !important;
+                    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+                }
+                div[data-testid="stMetric"] {
+                    background: rgba(30, 41, 59, 0.5) !important;
+                    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+                }
+                div[data-testid="stMetricValue"] { color: #f8fafc !important; }
+                div[data-testid="stExpander"] {
+                    background: rgba(30, 41, 59, 0.4) !important;
+                    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+                }
+                div[data-testid="stExpander"] summary { color: #f1f5f9 !important; }
+                div[data-testid="stTabs"] [data-baseweb="tab-list"] {
+                    background: rgba(30, 41, 59, 0.5) !important;
+                    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+                }
+                div[data-testid="stTabs"] [aria-selected="true"] {
+                    background: rgba(51, 65, 85, 0.9) !important;
+                    color: #f8fafc !important;
+                }
+                .glass-status-card {
+                    background: rgba(30, 41, 59, 0.75) !important;
+                    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+                    border-left: 3px solid #3b82f6 !important;
+                }
+                .glass-status-title { color: #f1f5f9 !important; }
+                .glass-status-meta { color: #cbd5e1 !important; }
+                .glass-status-detail { color: #94a3b8 !important; }
+            }
         </style>
     """, unsafe_allow_html=True)
 
@@ -1197,8 +1423,15 @@ def main():
 
     # Sidebar setup
     with st.sidebar:
-        st.markdown("### 🔬 Pilot Control Center")
-        st.info(f"**Frozen Config:** `ASL_SR_DPT_FINAL`\n\n**Hash:** `{CONFIG_HASH[:12]}...`\n\n**Code Hash:** `{CODE_HASH[:12]}...`")
+        st.markdown("### Pilot Control Center")
+        st.markdown(f"""
+        <div class="glass-panel">
+            <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: #94a3b8; font-weight: 600;">Configuration</div>
+            <div style="font-size: 0.85rem; font-weight: 600; color: #1e293b; margin-top: 2px;">ASL_SR_DPT_FINAL</div>
+            <div style="font-size: 0.72rem; color: #64748b; font-family: monospace; margin-top: 6px;">Config: {CONFIG_HASH[:12]}...</div>
+            <div style="font-size: 0.72rem; color: #64748b; font-family: monospace; margin-top: 2px;">Code: {CODE_HASH[:12]}...</div>
+        </div>
+        """, unsafe_allow_html=True)
 
         team_options = ["Team A", "Team B"]
         default_index = 0 if st.session_state.selected_team == "Team A" else 1
@@ -1213,15 +1446,19 @@ def main():
         paths = get_team_directories(selected_team)
 
         st.markdown("---")
-        st.markdown("### 🖥️ Certified Host Environment")
+        st.markdown("### Certified Host Environment")
         env_info = get_environment_info()
-        st.text(f"OS: {platform.system()} {platform.release()}")
-        st.text(f"Python: {env_info['python_version']}")
-        st.text(f"NumPy: {env_info['numpy_version']}")
-        st.text(f"SciPy: {env_info['scipy_version']}")
-        st.text(f"Pandas: {env_info['pandas_version']}")
-        st.text(f"OMP Threads: {env_info['thread_settings']['OMP_NUM_THREADS']}")
-        st.text(f"MKL Threads: {env_info['thread_settings']['MKL_NUM_THREADS']}")
+        st.markdown(f"""
+        <div class="glass-panel" style="font-size: 0.8rem; line-height: 1.7;">
+            <div style="display: flex; justify-content: space-between;"><span style="color: #64748b;">OS:</span> <b>{platform.system()} {platform.release()}</b></div>
+            <div style="display: flex; justify-content: space-between;"><span style="color: #64748b;">Python:</span> <code>{env_info['python_version']}</code></div>
+            <div style="display: flex; justify-content: space-between;"><span style="color: #64748b;">NumPy:</span> <code>{env_info['numpy_version']}</code></div>
+            <div style="display: flex; justify-content: space-between;"><span style="color: #64748b;">SciPy:</span> <code>{env_info['scipy_version']}</code></div>
+            <div style="display: flex; justify-content: space-between;"><span style="color: #64748b;">Pandas:</span> <code>{env_info['pandas_version']}</code></div>
+            <div style="display: flex; justify-content: space-between;"><span style="color: #64748b;">OMP Threads:</span> <code>{env_info['thread_settings']['OMP_NUM_THREADS']}</code></div>
+            <div style="display: flex; justify-content: space-between;"><span style="color: #64748b;">MKL Threads:</span> <code>{env_info['thread_settings']['MKL_NUM_THREADS']}</code></div>
+        </div>
+        """, unsafe_allow_html=True)
         st.caption("Single-threaded execution verified.")
 
     # Header section
@@ -1237,27 +1474,42 @@ def main():
     try:
         existing_keys = load_existing_composite_keys(paths["raw_csv"], CONFIG_HASH, CODE_HASH)
     except ValueError as val_err:
-        st.error(f"❌ {val_err}")
+        st.error(f"Integrity Error: {val_err}")
         existing_keys = set()
 
     completed_count = len(existing_keys)
 
     # Top info banner
     st.markdown(f"""
-    <div class="card">
-        <b>Active Track:</b> <span class="metric-badge">{selected_team}</span> &nbsp;|&nbsp; 
-        <b>Assigned Images:</b> <code>{', '.join(assigned_images)}</code> &nbsp;|&nbsp; 
-        <b>Evaluations Target:</b> <code>225</code> (5 images × 3 noise levels × 5 trials × 3 solvers) &nbsp;|&nbsp;
-        <b>Completed:</b> <code>{completed_count} / 225</code>
+    <div class="workload-bar">
+        <div class="workload-col">
+            <span class="workload-label">Active Track</span>
+            <span class="glass-pill">{selected_team}</span>
+        </div>
+        <div class="workload-divider"></div>
+        <div class="workload-col">
+            <span class="workload-label">Assigned Images</span>
+            <span class="workload-value" style="font-family: monospace;">{', '.join(assigned_images)}</span>
+        </div>
+        <div class="workload-divider"></div>
+        <div class="workload-col">
+            <span class="workload-label">Target Workload</span>
+            <span class="workload-value">225 evaluations (5 × 3 × 5 × 3)</span>
+        </div>
+        <div class="workload-divider"></div>
+        <div class="workload-col">
+            <span class="workload-label">Completed</span>
+            <span class="workload-value" style="font-family: monospace;">{completed_count} / 225</span>
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
     # Tab navigation
     tab_dash, tab_gates, tab_report, tab_export = st.tabs([
-        "📊 Live Benchmark Dashboard",
-        "🛡️ Pilot Safety Gates (Steps 1–5)",
-        "📑 Team Summary & Report",
-        "📦 Export & Merge Center",
+        "Live Benchmark Dashboard",
+        "Pilot Safety Gates (Steps 1–5)",
+        "Team Summary & Report",
+        "Export & Merge Center",
     ])
 
     # ==========================================================================
@@ -1287,9 +1539,9 @@ def main():
                 st.write(f"**Host OS:** {platform.platform()}")
                 st.write(f"**CPU Architecture:** {env_info['cpu']}")
             if g1_pass:
-                st.success("✅ STEP 1 PASSED: Environment is verified and single-threaded execution is locked.")
+                st.success("STEP 1 PASSED: Environment is verified and single-threaded execution is locked.")
             else:
-                st.error("❌ STEP 1 FAILED: Single-threaded execution flags or Python runtime constraint violated.")
+                st.error("STEP 1 FAILED: Single-threaded execution flags or Python runtime constraint violated.")
 
         # Gate 2: Strengthened Configuration Verification (Requirement 8)
         g2_pass, g2_errors = validate_frozen_research_parameters(PILOT_CONFIG, CONFIG_HASH)
@@ -1300,17 +1552,17 @@ def main():
             st.write(f"**Sensing Dimensions:** $M=38, N=64$; AC Sensing: $M_{{ac}}=37, N_{{ac}}=63$")
             st.write(f"**Regularization Parameters:** $\\lambda_{{DPT}}=0.1, \\lambda_{{LASSO}}=0.01$")
             if g2_pass:
-                st.success("✅ STEP 2 PASSED: All frozen research parameters match the exact thesis specification.")
+                st.success("STEP 2 PASSED: All frozen research parameters match the exact thesis specification.")
             else:
                 for err in g2_errors:
-                    st.error(f"❌ Config Error: {err}")
+                    st.error(f"Config Error: {err}")
 
         # Gate 3: Reproducibility Test (Requirements 3 & 4)
         with st.expander("STEP 3: Full-Image Deterministic Reproducibility Verification", expanded=True):
             st.write("Executes `test001` ($\\sigma=15.0$, Trial 1) twice for ASL-SR-DPT, OMP, and LASSO-ADMM across all 37,604 patches.")
             st.write("Verifies byte-level array matching and generates SHA-256 digests.")
 
-            btn_label = "🚀 Run Full-Image Reproducibility Verification" if not st.session_state.reproducibility_passed else "🔄 Re-run Reproducibility Verification"
+            btn_label = "Run Full-Image Reproducibility Verification" if not st.session_state.reproducibility_passed else "Re-run Reproducibility Verification"
             run_clicked = st.button(btn_label, key="btn_repro", type="primary" if not st.session_state.reproducibility_passed else "secondary")
 
             if run_clicked:
@@ -1318,7 +1570,7 @@ def main():
                 overall_bar = st.progress(0.0)
                 patch_bar = st.progress(0.0)
 
-                st.markdown("##### 💻 Live Execution Terminal Log")
+                st.markdown("##### Live Execution Terminal Log")
                 terminal_box = st.empty()
                 terminal_logs = []
                 t_repro_start = time.time()
@@ -1348,18 +1600,18 @@ def main():
                         rem_str = "estimating..."
 
                     status_placeholder.markdown(f"""
-                    <div style="background-color: #1a1a24; padding: 14px 20px; border-radius: 8px; border-left: 5px solid #3b82f6; margin-bottom: 12px;">
-                        <div style="font-size: 1.15em; font-weight: bold; color: #60a5fa;">
-                            ⏳ Step {run_num} of {total_runs}: {solver} (Execution {sub_run}/2)
+                    <div class="glass-status-card">
+                        <div class="glass-status-title">
+                            Step {run_num} of {total_runs}: {solver} (Execution {sub_run}/2)
                         </div>
-                        <div style="margin-top: 6px; font-size: 1.0em; color: #f1f5f9;">
-                            <b>Overall Progress:</b> <span style="color: #38bdf8; font-weight: bold;">{overall_pct:.1f}%</span> &nbsp;|&nbsp; 
-                            <b>Current Patch:</b> <span style="color: #a78bfa; font-weight: bold;">{p_cur:,} / {p_tot:,}</span> ({patch_pct:.1f}%)
+                        <div class="glass-status-meta">
+                            <b>Overall Progress:</b> <span style="color: #2563eb; font-weight: 600;">{overall_pct:.1f}%</span> &nbsp;|&nbsp; 
+                            <b>Current Patch:</b> <span style="font-weight: 600;">{p_cur:,} / {p_tot:,}</span> ({patch_pct:.1f}%)
                         </div>
-                        <div style="margin-top: 4px; font-size: 0.9em; color: #94a3b8;">
-                            ⏱️ <b>Elapsed:</b> {int(elapsed // 60):02d}m {int(elapsed % 60):02d}s &nbsp;|&nbsp; 
+                        <div class="glass-status-detail">
+                            <b>Elapsed:</b> {int(elapsed // 60):02d}m {int(elapsed % 60):02d}s &nbsp;|&nbsp; 
                             <b>Estimated Remaining:</b> ~{rem_str} &nbsp;|&nbsp; 
-                            <i>{msg}</i>
+                            <span>{msg}</span>
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
@@ -1398,11 +1650,11 @@ def main():
                     log_term(f"[ERROR] {e}")
 
             if st.session_state.reproducibility_passed:
-                st.success("✅ STEP 3 PASSED: All solvers verified reproducible under repeated seeds.")
+                st.success("STEP 3 PASSED: All solvers verified reproducible under repeated seeds.")
                 if st.session_state.reproducibility_results:
                     st.dataframe(pd.DataFrame(st.session_state.reproducibility_results), use_container_width=True)
             else:
-                st.warning("Reproducibility check not yet executed or failed. Click the button above to run verification.")
+                st.info("STEP 3 PENDING: Reproducibility check not yet executed or failed. Click above to run verification.")
 
         # Gate 4: Workload & Dataset Verification (Requirement 9)
         g4_team_ok, g4_team_errs = validate_team_assignment_integrity(PILOT_CONFIG)
@@ -1418,11 +1670,11 @@ def main():
             st.write(f"**Output Directory Writable:** `{paths['base']}`")
             if not g4_team_ok:
                 for err in g4_team_errs:
-                    st.error(f"❌ Team Integrity Error: {err}")
+                    st.error(f"Team Integrity Error: {err}")
             elif len(g4_missing_images) > 0:
                 st.error(f"Missing images in data/BSD68: {g4_missing_images}")
             else:
-                st.success("✅ STEP 4 PASSED: Non-overlapping workload assignment and dataset integrity certified.")
+                st.success("STEP 4 PASSED: Non-overlapping workload assignment and dataset integrity certified.")
 
         # Gate 5: Final Experiment Integrity Verification (Requirement 7)
         g5_pass, g5_errors = validate_gate_5_experiment_integrity(selected_team, PILOT_CONFIG, CONFIG_HASH, CODE_HASH)
@@ -1435,10 +1687,10 @@ def main():
             st.write("- Codebase and configuration SHA-256 consistency")
 
             if g5_pass:
-                st.success("✅ STEP 5 PASSED: Final experiment integrity preconditions satisfied.")
+                st.success("STEP 5 PASSED: Final experiment integrity preconditions satisfied.")
             else:
                 for err in g5_errors:
-                    st.error(f"❌ Experiment Integrity Error: {err}")
+                    st.error(f"Experiment Integrity Error: {err}")
 
         # Overall readiness definition (Requirement 7)
         all_gates_pass = (
@@ -1451,9 +1703,9 @@ def main():
 
         st.markdown("---")
         if all_gates_pass:
-            st.success("🎉 ALL 5 GATES PASSED: Benchmark execution is unlocked.")
+            st.success("ALL 5 GATES PASSED: Benchmark execution is unlocked.")
         else:
-            st.warning("⚠️ All 5 verification gates must pass to unlock benchmark execution.")
+            st.warning("All 5 verification gates must pass to unlock benchmark execution.")
 
     # ==========================================================================
     # TAB 1: Live Benchmark Dashboard
@@ -1486,7 +1738,7 @@ def main():
 
         # Control area
         can_start = (len(remaining_tasks) > 0) and all_gates_pass
-        btn_label = "▶️ Start Benchmark Workload" if completed_count == 0 else "⏯️ Resume Benchmark Workload"
+        btn_label = "Start Benchmark Workload" if completed_count == 0 else "Resume Benchmark Workload"
 
         start_clicked = st.button(
             btn_label,
@@ -1496,7 +1748,7 @@ def main():
         )
 
         st.caption(
-            "ℹ️ **Interruption & Resumption Safety:** Every completed evaluation is flushed atomically to disk. "
+            "**Interruption & Resumption Safety:** Every completed evaluation is flushed atomically to disk. "
             "To pause, close the terminal or browser. Clicking Resume will automatically pick up from the next pending task."
         )
 
@@ -1520,10 +1772,19 @@ def main():
                     p_pct = (p_cur / float(p_tot)) * 100.0
                     sub_eval_pct = ((completed_count + evals_done_session + (p_cur / float(p_tot))) / float(total_tasks)) * 100.0
                     status_placeholder.markdown(f"""
-                        **Current Execution ({completed_count + evals_done_session + 1} / {total_tasks}):**  
-                        `Image: {img_id}` | `Noise: σ={int(noise_sigma)}` | `Trial: {trial}` | `Solver: {solver_name}`  
-                        *Patch Progress:* `{p_cur:,} / {p_tot:,}` ({p_pct:.1f}%) &nbsp;|&nbsp; *Overall Workload:* `{sub_eval_pct:.1f}%`
-                    """)
+                        <div class="glass-status-card">
+                            <div class="glass-status-title">
+                                Execution {completed_count + evals_done_session + 1} / {total_tasks}: {solver_name}
+                            </div>
+                            <div class="glass-status-meta">
+                                Image: <code>{img_id}</code> &nbsp;|&nbsp; Noise: <code>σ={int(noise_sigma)}</code> &nbsp;|&nbsp; Trial: <code>{trial}</code>
+                            </div>
+                            <div class="glass-status-detail">
+                                Patch Progress: <b>{p_cur:,} / {p_tot:,}</b> ({p_pct:.1f}%) &nbsp;|&nbsp; 
+                                Overall Workload: <b>{sub_eval_pct:.1f}%</b>
+                            </div>
+                        </div>
+                    """, unsafe_allow_html=True)
 
                 try:
                     record, rec_img, noisy_img, _ = execute_single_pilot_evaluation(
@@ -1575,11 +1836,11 @@ def main():
                 generate_team_report(
                     selected_team, paths["raw_csv"], paths["team_report_md"], PILOT_CONFIG, CONFIG_HASH, CODE_HASH, gates_dict, repro_dict
                 )
-                st.success(f"🎉 Team workload completed! All {total_tasks} evaluations finished.")
+                st.success(f"Team workload completed: all {total_tasks} evaluations finished.")
             st.rerun()
 
         # Recent Results Preview
-        st.markdown("### 📋 Recent Evaluation Records")
+        st.markdown("### Recent Evaluation Records")
         if os.path.exists(paths["raw_csv"]):
             df_recent = pd.read_csv(paths["raw_csv"])
             st.dataframe(df_recent.tail(10), use_container_width=True)
@@ -1594,7 +1855,7 @@ def main():
         if os.path.exists(paths["raw_csv"]):
             df_full = pd.read_csv(paths["raw_csv"])
             if len(df_full) == 225:
-                st.success("🏆 225 / 225 Evaluations Completed! Master Team Report is generated.")
+                st.success("225 / 225 Evaluations Completed. Master Team Report is generated.")
             else:
                 st.warning(f"In Progress: {len(df_full)} / 225 evaluations completed.")
 
@@ -1626,11 +1887,11 @@ def main():
 
         col_ex1, col_ex2 = st.columns(2)
         with col_ex1:
-            st.markdown("#### 📄 Individual File Downloads")
+            st.markdown("#### Individual File Downloads")
             if os.path.exists(paths["raw_csv"]):
                 with open(paths["raw_csv"], "rb") as f:
                     st.download_button(
-                        label="📥 Export Raw CSV",
+                        label="Export Raw CSV",
                         data=f.read(),
                         file_name=f"pilot_raw_results_{selected_team.lower().replace(' ', '_')}.csv",
                         mime="text/csv",
@@ -1638,7 +1899,7 @@ def main():
             if os.path.exists(paths["failures_csv"]):
                 with open(paths["failures_csv"], "rb") as f:
                     st.download_button(
-                        label="📥 Export Failure Log",
+                        label="Export Failure Log",
                         data=f.read(),
                         file_name=f"pilot_failures_{selected_team.lower().replace(' ', '_')}.csv",
                         mime="text/csv",
@@ -1646,7 +1907,7 @@ def main():
             if os.path.exists(paths["team_report_md"]):
                 with open(paths["team_report_md"], "rb") as f:
                     st.download_button(
-                        label="📥 Export Team Report (Markdown)",
+                        label="Export Team Report (Markdown)",
                         data=f.read(),
                         file_name=f"team_report_{selected_team.lower().replace(' ', '_')}.md",
                         mime="text/markdown",
@@ -1654,14 +1915,14 @@ def main():
             if os.path.exists(CONFIG_PATH):
                 with open(CONFIG_PATH, "rb") as f:
                     st.download_button(
-                        label="📥 Export Configuration JSON",
+                        label="Export Configuration JSON",
                         data=f.read(),
                         file_name="pilot_config.json",
                         mime="application/json",
                     )
 
         with col_ex2:
-            st.markdown("#### 📦 Comprehensive ZIP Bundle")
+            st.markdown("#### Comprehensive ZIP Bundle")
             st.write("Bundles all raw CSVs, failure logs, summaries, and configuration into a single archive.")
             if st.button("Generate Teammate ZIP Package"):
                 zip_buffer = io.BytesIO()
@@ -1675,14 +1936,14 @@ def main():
                         zf.write(CONFIG_PATH, arcname="pilot_config.json")
 
                 st.download_button(
-                    label="📥 Download Complete Team Results (.ZIP)",
+                    label="Download Complete Team Results (.ZIP)",
                     data=zip_buffer.getvalue(),
                     file_name=f"asl_sr_dpt_pilot_{selected_team.lower().replace(' ', '_')}.zip",
                     mime="application/zip",
                 )
 
         st.markdown("---")
-        st.markdown("#### 🔗 Central Merge Instructions")
+        st.markdown("#### Central Merge Instructions")
         st.code("""
 # When both Team A (Khevin) and Team B (Marc) have completed their 225 evaluations:
 python merge_pilot_results.py \\

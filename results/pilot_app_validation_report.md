@@ -47,7 +47,7 @@ The execution environment is locked and certified for reproducible single-thread
 - **Config SHA-256:** `5b7afb33830f7ce025bed2b5639f6b6eef01d7b2844fba1f3fe12cf8b962a27b`
 
 ### Codebase Digest
-- **Aggregate Codebase SHA-256:** `1a7f1ea2a3fde8abb927832ed556a248f0dfcc789eace421b0121c3e0bd6dd22`
+- **Aggregate Codebase SHA-256:** `408ec1670e95496beca4a2fee6b0ec81dd7634477b3eb73aec80ec326a42ed12`
 
 ### Individual Component Hashes
 | Component / File Path | SHA-256 Digest | Status |
@@ -58,7 +58,7 @@ The execution environment is locked and certified for reproducible single-thread
 | `code/sensing.py` | `b145f8a644d385cc23e28450ea743473a2af81e3b465c999c753c7f4ac948a54` | Frozen |
 | `code/reconstruction.py` | `87f706f6486c6bf0f91ab3dc9fd7c744f977ca7baab72ddb0aa09e4a2cbc5a12` | Frozen |
 | `code/metrics.py` | `eaf8806c3c6ba80122f74b08ca51dc270195e867ced4dd96f40650320baa7324` | Frozen |
-| `app.py` | `2c0e21c504d8c15ddbcf259908c7a3df023f851efff22aecd858cd3a73d8c47a` | Verified |
+| `app.py` | `3a4f4a365983ea66399b9d3a48800170ae6dca270078c6b4be0ff84eb657d14d` | Verified |
 | `requirements.txt` | `64c2c79aad5434ae7465c7d2b69e6a4a141d5ca750a9cd71c0b26775ca0226ab` | Verified |
 
 *Note: Any change to `app.py` or `requirements.txt` immediately changes `CODE_HASH`, preventing unverified modifications during execution.*
