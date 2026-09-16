@@ -1152,8 +1152,29 @@ def main():
         <style>
             @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
-            html, body, [class*="st-"] {
+            /* Typography: Base font on root application container */
+            .stApp {
                 font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            }
+
+            /* Strictly preserve Material Symbols and Streamlit icon fonts */
+            [data-testid*="Icon"],
+            [data-testid*="icon"],
+            [data-testid="stExpanderToggleIcon"],
+            .material-symbols-rounded,
+            .material-symbols-outlined,
+            .material-icons,
+            [class*="material-symbols"] {
+                font-family: 'Material Symbols Rounded', 'Material Icons' !important;
+                font-style: normal !important;
+                font-weight: 400 !important;
+                letter-spacing: normal !important;
+                text-transform: none !important;
+                display: inline-block !important;
+                white-space: nowrap !important;
+                word-wrap: normal !important;
+                direction: ltr !important;
+                -webkit-font-smoothing: antialiased !important;
             }
 
             /* Header Typography */
@@ -1161,14 +1182,14 @@ def main():
                 font-size: 1.95rem;
                 font-weight: 700;
                 letter-spacing: -0.035em;
-                color: #0f172a;
+                color: var(--text-color, #0f172a);
                 margin-bottom: 0.2rem;
             }
             .sub-title {
                 font-size: 0.92rem;
                 font-weight: 400;
                 letter-spacing: -0.01em;
-                color: #64748b;
+                color: #94a3b8;
                 margin-bottom: 1.5rem;
                 line-height: 1.4;
             }
@@ -1179,14 +1200,14 @@ def main():
                 flex-wrap: wrap;
                 align-items: center;
                 gap: 18px;
-                background: rgba(255, 255, 255, 0.65);
+                background: rgba(128, 128, 128, 0.05);
                 backdrop-filter: blur(16px) saturate(180%);
                 -webkit-backdrop-filter: blur(16px) saturate(180%);
-                border: 1px solid rgba(226, 232, 240, 0.8);
+                border: 1px solid rgba(128, 128, 128, 0.2);
                 border-radius: 12px;
                 padding: 14px 20px;
                 margin-bottom: 22px;
-                box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.03);
+                box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
             }
             .workload-col {
                 display: flex;
@@ -1203,12 +1224,12 @@ def main():
             .workload-value {
                 font-size: 0.88rem;
                 font-weight: 600;
-                color: #1e293b;
+                color: var(--text-color, #1e293b);
             }
             .workload-divider {
                 height: 30px;
                 width: 1px;
-                background: rgba(226, 232, 240, 0.8);
+                background: rgba(128, 128, 128, 0.2);
             }
 
             /* Glass Pill Badges */
@@ -1220,17 +1241,17 @@ def main():
                 font-size: 0.78rem;
                 font-weight: 600;
                 letter-spacing: 0.02em;
-                background: rgba(37, 99, 235, 0.08);
-                color: #1d4ed8;
-                border: 1px solid rgba(37, 99, 235, 0.18);
+                background: rgba(37, 99, 235, 0.12);
+                color: #3b82f6;
+                border: 1px solid rgba(37, 99, 235, 0.25);
             }
 
             /* Sidebar Glass Panel */
             .glass-panel {
-                background: rgba(255, 255, 255, 0.5);
+                background: rgba(128, 128, 128, 0.05);
                 backdrop-filter: blur(12px);
                 -webkit-backdrop-filter: blur(12px);
-                border: 1px solid rgba(226, 232, 240, 0.7);
+                border: 1px solid rgba(128, 128, 128, 0.2);
                 border-radius: 10px;
                 padding: 12px 14px;
                 margin-bottom: 14px;
@@ -1238,35 +1259,35 @@ def main():
 
             /* Metric Containers Override */
             div[data-testid="stMetric"] {
-                background: rgba(255, 255, 255, 0.55) !important;
+                background: rgba(128, 128, 128, 0.05) !important;
                 backdrop-filter: blur(14px) saturate(180%) !important;
                 -webkit-backdrop-filter: blur(14px) saturate(180%) !important;
-                border: 1px solid rgba(226, 232, 240, 0.8) !important;
+                border: 1px solid rgba(128, 128, 128, 0.2) !important;
                 border-radius: 12px !important;
                 padding: 14px 18px !important;
-                box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.02) !important;
+                box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.03) !important;
             }
             div[data-testid="stMetricLabel"] p {
                 font-size: 0.74rem !important;
                 font-weight: 600 !important;
                 text-transform: uppercase !important;
                 letter-spacing: 0.05em !important;
-                color: #64748b !important;
+                color: #94a3b8 !important;
             }
             div[data-testid="stMetricValue"] {
                 font-weight: 700 !important;
-                color: #0f172a !important;
+                color: var(--text-color, #0f172a) !important;
                 letter-spacing: -0.02em !important;
             }
 
             /* Glass Tabs */
             div[data-testid="stTabs"] [data-baseweb="tab-list"] {
-                background: rgba(241, 245, 249, 0.65) !important;
+                background: rgba(128, 128, 128, 0.08) !important;
                 backdrop-filter: blur(10px) !important;
                 border-radius: 10px !important;
                 padding: 4px !important;
                 gap: 4px !important;
-                border: 1px solid rgba(226, 232, 240, 0.8) !important;
+                border: 1px solid rgba(128, 128, 128, 0.18) !important;
                 margin-bottom: 16px !important;
             }
             div[data-testid="stTabs"] [data-baseweb="tab"] {
@@ -1274,40 +1295,40 @@ def main():
                 padding: 8px 16px !important;
                 font-size: 0.86rem !important;
                 font-weight: 500 !important;
-                color: #475569 !important;
+                color: var(--text-color, #475569) !important;
                 border: none !important;
                 background: transparent !important;
                 transition: all 0.15s ease !important;
             }
             div[data-testid="stTabs"] [aria-selected="true"] {
-                background: rgba(255, 255, 255, 0.95) !important;
-                color: #0f172a !important;
+                background: rgba(128, 128, 128, 0.2) !important;
+                color: var(--text-color, #0f172a) !important;
                 font-weight: 600 !important;
-                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
             }
 
             /* Glass Status Cards (Execution & Progress) */
             .glass-status-card {
-                background: rgba(255, 255, 255, 0.75);
+                background: rgba(128, 128, 128, 0.06);
                 backdrop-filter: blur(16px) saturate(180%);
                 -webkit-backdrop-filter: blur(16px) saturate(180%);
-                border: 1px solid rgba(226, 232, 240, 0.85);
-                border-left: 3px solid #2563eb;
+                border: 1px solid rgba(128, 128, 128, 0.22);
+                border-left: 3px solid #3b82f6 !important;
                 border-radius: 10px;
                 padding: 14px 18px;
                 margin-bottom: 14px;
-                box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.02);
+                box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.04);
             }
             .glass-status-title {
                 font-size: 0.95rem;
                 font-weight: 600;
-                color: #1e293b;
+                color: var(--text-color, #1e293b);
                 letter-spacing: -0.01em;
             }
             .glass-status-meta {
                 margin-top: 5px;
                 font-size: 0.86rem;
-                color: #475569;
+                color: #94a3b8;
             }
             .glass-status-detail {
                 margin-top: 4px;
@@ -1315,19 +1336,13 @@ def main():
                 color: #64748b;
             }
 
-            /* Clean Expanders */
+            /* Clean Expanders - Preserve summary & icons untouched */
             div[data-testid="stExpander"] {
-                background: rgba(255, 255, 255, 0.45) !important;
+                background: rgba(128, 128, 128, 0.04) !important;
                 backdrop-filter: blur(10px) !important;
-                border: 1px solid rgba(226, 232, 240, 0.7) !important;
+                border: 1px solid rgba(128, 128, 128, 0.18) !important;
                 border-radius: 10px !important;
                 margin-bottom: 12px !important;
-                box-shadow: 0 2px 10px -2px rgba(0, 0, 0, 0.02) !important;
-            }
-            div[data-testid="stExpander"] summary {
-                font-weight: 600 !important;
-                font-size: 0.9rem !important;
-                color: #1e293b !important;
             }
 
             /* Minimal Buttons */
@@ -1336,49 +1351,6 @@ def main():
                 font-weight: 500 !important;
                 font-size: 0.88rem !important;
                 letter-spacing: 0.01em !important;
-            }
-
-            /* Dark Theme Adaptations */
-            @media (prefers-color-scheme: dark) {
-                .main-title { color: #f8fafc !important; }
-                .sub-title { color: #94a3b8 !important; }
-                .workload-bar {
-                    background: rgba(30, 41, 59, 0.65) !important;
-                    border: 1px solid rgba(255, 255, 255, 0.08) !important;
-                    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.25) !important;
-                }
-                .workload-value { color: #f1f5f9 !important; }
-                .workload-divider { background: rgba(255, 255, 255, 0.08) !important; }
-                .glass-panel {
-                    background: rgba(30, 41, 59, 0.5) !important;
-                    border: 1px solid rgba(255, 255, 255, 0.08) !important;
-                }
-                div[data-testid="stMetric"] {
-                    background: rgba(30, 41, 59, 0.5) !important;
-                    border: 1px solid rgba(255, 255, 255, 0.08) !important;
-                }
-                div[data-testid="stMetricValue"] { color: #f8fafc !important; }
-                div[data-testid="stExpander"] {
-                    background: rgba(30, 41, 59, 0.4) !important;
-                    border: 1px solid rgba(255, 255, 255, 0.08) !important;
-                }
-                div[data-testid="stExpander"] summary { color: #f1f5f9 !important; }
-                div[data-testid="stTabs"] [data-baseweb="tab-list"] {
-                    background: rgba(30, 41, 59, 0.5) !important;
-                    border: 1px solid rgba(255, 255, 255, 0.08) !important;
-                }
-                div[data-testid="stTabs"] [aria-selected="true"] {
-                    background: rgba(51, 65, 85, 0.9) !important;
-                    color: #f8fafc !important;
-                }
-                .glass-status-card {
-                    background: rgba(30, 41, 59, 0.75) !important;
-                    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-                    border-left: 3px solid #3b82f6 !important;
-                }
-                .glass-status-title { color: #f1f5f9 !important; }
-                .glass-status-meta { color: #cbd5e1 !important; }
-                .glass-status-detail { color: #94a3b8 !important; }
             }
         </style>
     """, unsafe_allow_html=True)
