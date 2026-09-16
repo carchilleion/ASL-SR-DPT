@@ -581,6 +581,7 @@ def execute_single_pilot_evaluation(
     config_hash,
     code_hash,
     dataset_dir="data/BSD68",
+    patch_callback=None,
 ):
     """
     Executes a single full-image solver evaluation conforming strictly to research methodology:
@@ -691,6 +692,9 @@ def execute_single_pilot_evaluation(
             total_failed_ls_sum += sum(diag_sub["patch_failed_line_searches"])
             final_sigmas.extend(diag_sub["patch_final_sigma"])
 
+            if patch_callback and (start % 2500 == 0 or end == total_patches):
+                patch_callback(end, total_patches, f"ASL-SR-DPT: {end:,}/{total_patches:,} patches solved")
+
         solve_time = time.perf_counter() - t_solve_start
 
         Z_ac_final = np.vstack(recovered_ac)
@@ -741,6 +745,9 @@ def execute_single_pilot_evaluation(
             res_list[i] = diag["final_residual"]
             iters_list[i] = diag["iterations"]
 
+            if patch_callback and ((i + 1) % 2000 == 0 or i == total_patches - 1):
+                patch_callback(i + 1, total_patches, f"OMP: {i + 1:,}/{total_patches:,} patches solved")
+
         solve_time = time.perf_counter() - t_solve_start
         Z_final = recovered_thetas
 
@@ -785,6 +792,9 @@ def execute_single_pilot_evaluation(
             iters_list[i] = diag["iterations"]
             pri_list[i] = diag["final_primal_residual"]
             dual_list[i] = diag["final_dual_residual"]
+
+            if patch_callback and ((i + 1) % 2000 == 0 or i == total_patches - 1):
+                patch_callback(i + 1, total_patches, f"LASSO-ADMM: {i + 1:,}/{total_patches:,} patches solved")
 
         solve_time = time.perf_counter() - t_solve_start
         Z_final = recovered_thetas
@@ -887,28 +897,58 @@ def execute_single_pilot_evaluation(
 # ==============================================================================
 # 6. True Reproducibility Test Suite (Gate 3)
 # ==============================================================================
-def run_reproducibility_test(config, config_hash, code_hash):
+def run_reproducibility_test(config, config_hash, code_hash, progress_callback=None):
     """
     Runs fixed condition (test001, sigma=15.0, trial=1) twice for all 3 solvers
     using the COMPLETE full-image processing pipeline (Requirements 3 & 4).
     Compares reconstructed image arrays and coefficient arrays with byte-level and tolerance checks.
     Classifies each solver as EXACT_REPRODUCTION or NUMERICALLY_REPRODUCIBLE.
+    Supports optional progress_callback(run_num, total_runs, solver, sub_run, p_cur, p_tot, msg).
     """
     test_img = "test001"
     test_sigma = 15.0
     test_trial = 1
     solvers = ["ASL-SR-DPT", "OMP", "LASSO-ADMM"]
     results = []
+    total_runs = 6
+    run_num = 0
 
     for s in solvers:
-        # First execution
+        # First execution (Run 1)
+        run_num += 1
+        if progress_callback:
+            progress_callback(run_num, total_runs, s, 1, 0, 37604, f"Starting {s} (Run 1/2)...")
+
+        def make_cb1(r_n, s_name):
+            def cb(p_cur, p_tot, msg):
+                if progress_callback:
+                    progress_callback(r_n, total_runs, s_name, 1, p_cur, p_tot, msg)
+            return cb
+
         rec1, img1, _, z1 = execute_single_pilot_evaluation(
-            test_img, test_sigma, test_trial, s, "Verification", config, config_hash, code_hash
+            test_img, test_sigma, test_trial, s, "Verification", config, config_hash, code_hash,
+            patch_callback=make_cb1(run_num, s)
         )
-        # Second execution
+        if progress_callback:
+            progress_callback(run_num, total_runs, s, 1, 37604, 37604, f"Completed {s} Run 1/2 in {rec1['solve_time']:.1f}s | PSNR: {rec1['psnr']:.2f} dB")
+
+        # Second execution (Run 2)
+        run_num += 1
+        if progress_callback:
+            progress_callback(run_num, total_runs, s, 2, 0, 37604, f"Starting {s} (Run 2/2 duplicate solve)...")
+
+        def make_cb2(r_n, s_name):
+            def cb(p_cur, p_tot, msg):
+                if progress_callback:
+                    progress_callback(r_n, total_runs, s_name, 2, p_cur, p_tot, msg)
+            return cb
+
         rec2, img2, _, z2 = execute_single_pilot_evaluation(
-            test_img, test_sigma, test_trial, s, "Verification", config, config_hash, code_hash
+            test_img, test_sigma, test_trial, s, "Verification", config, config_hash, code_hash,
+            patch_callback=make_cb2(run_num, s)
         )
+        if progress_callback:
+            progress_callback(run_num, total_runs, s, 2, 37604, 37604, f"Completed {s} Run 2/2 in {rec2['solve_time']:.1f}s | PSNR: {rec2['psnr']:.2f} dB")
 
         # Array byte comparisons and SHA-256 hashes
         img1_bytes = np.ascontiguousarray(img1, dtype=np.float64).tobytes()
@@ -940,6 +980,9 @@ def run_reproducibility_test(config, config_hash, code_hash):
         else:
             classification = "FAILED"
             passed = False
+
+        if progress_callback:
+            progress_callback(run_num, total_runs, s, 2, 37604, 37604, f">>> {s} Result: {classification} (Bytes match: {bytes_match}, Max Δ: {max_img_diff:.2e})")
 
         results.append({
             "solver": s,
@@ -1132,6 +1175,21 @@ def main():
         st.session_state.selected_team = cli_team
     if "reproducibility_passed" not in st.session_state:
         st.session_state.reproducibility_passed = False
+        st.session_state.reproducibility_results = []
+        rep_file = os.path.join(REPO_ROOT, "results", "reproducibility_validation_report.json")
+        if os.path.exists(rep_file):
+            try:
+                with open(rep_file, "r", encoding="utf-8") as rf:
+                    rep_data = json.load(rf)
+                if (
+                    rep_data.get("config_hash") == CONFIG_HASH
+                    and rep_data.get("code_hash") == CODE_HASH
+                    and rep_data.get("overall_passed") is True
+                ):
+                    st.session_state.reproducibility_passed = True
+                    st.session_state.reproducibility_results = rep_data.get("results", [])
+            except Exception:
+                pass
     if "reproducibility_results" not in st.session_state:
         st.session_state.reproducibility_results = []
     if "benchmark_running" not in st.session_state:
@@ -1252,25 +1310,99 @@ def main():
             st.write("Executes `test001` ($\\sigma=15.0$, Trial 1) twice for ASL-SR-DPT, OMP, and LASSO-ADMM across all 37,604 patches.")
             st.write("Verifies byte-level array matching and generates SHA-256 digests.")
 
-            if st.button("🚀 Run Full-Image Reproducibility Verification", key="btn_repro"):
-                with st.spinner("Executing duplicate reference solves on all 37,604 patches for ASL-SR-DPT, OMP, and LASSO-ADMM..."):
-                    try:
-                        repro_results = run_reproducibility_test(PILOT_CONFIG, CONFIG_HASH, CODE_HASH)
-                        all_passed = all(r["passed"] for r in repro_results)
-                        st.session_state.reproducibility_passed = all_passed
-                        st.session_state.reproducibility_results = repro_results
-                        st.dataframe(pd.DataFrame(repro_results))
-                        if all_passed:
-                            st.success("✅ STEP 3 PASSED: All solvers verified reproducible under repeated seeds.")
-                        else:
-                            st.error("❌ STEP 3 FAILED: Output discrepancy detected under repeated seeds.")
-                    except Exception as e:
-                        st.error(f"Error during reproducibility verification: {e}")
+            btn_label = "🚀 Run Full-Image Reproducibility Verification" if not st.session_state.reproducibility_passed else "🔄 Re-run Reproducibility Verification"
+            run_clicked = st.button(btn_label, key="btn_repro", type="primary" if not st.session_state.reproducibility_passed else "secondary")
+
+            if run_clicked:
+                status_placeholder = st.empty()
+                overall_bar = st.progress(0.0)
+                patch_bar = st.progress(0.0)
+
+                st.markdown("##### 💻 Live Execution Terminal Log")
+                terminal_box = st.empty()
+                terminal_logs = []
+                t_repro_start = time.time()
+
+                def log_term(msg):
+                    ts = datetime.now().strftime("%H:%M:%S")
+                    line = f"[{ts}] {msg}"
+                    terminal_logs.append(line)
+                    terminal_box.code("\n".join(terminal_logs[-30:]), language="bash")
+
+                log_term("=== Initiating Gate 3 Deterministic Reproducibility Verification ===")
+                log_term("Reference Image: test001 (512x512) -> 37,604 patches (8x8, stride 2) | Noise: sigma=15.0 | Trial: 1")
+                log_term("Scope: 3 Solvers x 2 Executions = 6 Full-Image Solves (225,624 patches total)")
+
+                def repro_ui_callback(run_num, total_runs, solver, sub_run, p_cur, p_tot, msg):
+                    overall_frac = min(1.0, max(0.0, (run_num - 1 + (p_cur / float(p_tot))) / float(total_runs)))
+                    patch_frac = min(1.0, max(0.0, p_cur / float(p_tot)))
+                    overall_pct = overall_frac * 100.0
+                    patch_pct = patch_frac * 100.0
+
+                    elapsed = time.time() - t_repro_start
+                    if overall_frac > 0.02:
+                        est_total = elapsed / overall_frac
+                        rem = max(0.0, est_total - elapsed)
+                        rem_str = f"{int(rem // 60):02d}m {int(rem % 60):02d}s"
+                    else:
+                        rem_str = "estimating..."
+
+                    status_placeholder.markdown(f"""
+                    <div style="background-color: #1a1a24; padding: 14px 20px; border-radius: 8px; border-left: 5px solid #3b82f6; margin-bottom: 12px;">
+                        <div style="font-size: 1.15em; font-weight: bold; color: #60a5fa;">
+                            ⏳ Step {run_num} of {total_runs}: {solver} (Execution {sub_run}/2)
+                        </div>
+                        <div style="margin-top: 6px; font-size: 1.0em; color: #f1f5f9;">
+                            <b>Overall Progress:</b> <span style="color: #38bdf8; font-weight: bold;">{overall_pct:.1f}%</span> &nbsp;|&nbsp; 
+                            <b>Current Patch:</b> <span style="color: #a78bfa; font-weight: bold;">{p_cur:,} / {p_tot:,}</span> ({patch_pct:.1f}%)
+                        </div>
+                        <div style="margin-top: 4px; font-size: 0.9em; color: #94a3b8;">
+                            ⏱️ <b>Elapsed:</b> {int(elapsed // 60):02d}m {int(elapsed % 60):02d}s &nbsp;|&nbsp; 
+                            <b>Estimated Remaining:</b> ~{rem_str} &nbsp;|&nbsp; 
+                            <i>{msg}</i>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+                    overall_bar.progress(overall_frac, text=f"Overall Verification: {overall_pct:.1f}% (Step {run_num} of {total_runs})")
+                    patch_bar.progress(patch_frac, text=f"Current Solver ({solver}): {p_cur:,} / {p_tot:,} patches ({patch_pct:.1f}%)")
+
+                    if msg and (msg.startswith("Starting") or msg.startswith("Completed") or msg.startswith(">>>") or msg.startswith("===")):
+                        log_term(msg)
+
+                try:
+                    repro_results = run_reproducibility_test(
+                        PILOT_CONFIG, CONFIG_HASH, CODE_HASH, progress_callback=repro_ui_callback
+                    )
+                    all_passed = all(r["passed"] for r in repro_results)
+                    st.session_state.reproducibility_passed = all_passed
+                    st.session_state.reproducibility_results = repro_results
+
+                    rep_path = os.path.join(REPO_ROOT, "results", "reproducibility_validation_report.json")
+                    with open(rep_path, "w", encoding="utf-8") as rf:
+                        json.dump({
+                            "timestamp": datetime.now().isoformat(),
+                            "config_hash": CONFIG_HASH,
+                            "code_hash": CODE_HASH,
+                            "elapsed_seconds": time.time() - t_repro_start,
+                            "overall_passed": all_passed,
+                            "results": repro_results,
+                        }, rf, indent=2)
+
+                    log_term(f"=== Verification Complete! All Passed: {all_passed} ===")
+                    time.sleep(1)
+                    st.rerun()
+
+                except Exception as e:
+                    st.error(f"Error during reproducibility verification: {e}")
+                    log_term(f"[ERROR] {e}")
 
             if st.session_state.reproducibility_passed:
-                st.info("Deterministic reproducibility verification is certified for this session.")
+                st.success("✅ STEP 3 PASSED: All solvers verified reproducible under repeated seeds.")
+                if st.session_state.reproducibility_results:
+                    st.dataframe(pd.DataFrame(st.session_state.reproducibility_results), use_container_width=True)
             else:
-                st.warning("Reproducibility check not yet executed or failed.")
+                st.warning("Reproducibility check not yet executed or failed. Click the button above to run verification.")
 
         # Gate 4: Workload & Dataset Verification (Requirement 9)
         g4_team_ok, g4_team_errs = validate_team_assignment_integrity(PILOT_CONFIG)
@@ -1384,14 +1516,19 @@ def main():
                 if key in existing_keys:
                     continue
 
-                status_placeholder.markdown(f"""
-                    **Current Execution ({completed_count + evals_done_session + 1} / {total_tasks}):**  
-                    `Image: {img_id}` | `Noise: σ={int(noise_sigma)}` | `Trial: {trial}` | `Solver: {solver_name}`
-                """)
+                def dash_patch_cb(p_cur, p_tot, p_msg):
+                    p_pct = (p_cur / float(p_tot)) * 100.0
+                    sub_eval_pct = ((completed_count + evals_done_session + (p_cur / float(p_tot))) / float(total_tasks)) * 100.0
+                    status_placeholder.markdown(f"""
+                        **Current Execution ({completed_count + evals_done_session + 1} / {total_tasks}):**  
+                        `Image: {img_id}` | `Noise: σ={int(noise_sigma)}` | `Trial: {trial}` | `Solver: {solver_name}`  
+                        *Patch Progress:* `{p_cur:,} / {p_tot:,}` ({p_pct:.1f}%) &nbsp;|&nbsp; *Overall Workload:* `{sub_eval_pct:.1f}%`
+                    """)
 
                 try:
                     record, rec_img, noisy_img, _ = execute_single_pilot_evaluation(
-                        img_id, noise_sigma, trial, solver_name, selected_team, PILOT_CONFIG, CONFIG_HASH, CODE_HASH
+                        img_id, noise_sigma, trial, solver_name, selected_team, PILOT_CONFIG, CONFIG_HASH, CODE_HASH,
+                        patch_callback=dash_patch_cb
                     )
                     append_evaluation_record(paths["raw_csv"], record)
                     existing_keys.add(key)
