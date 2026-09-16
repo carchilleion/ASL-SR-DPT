@@ -44,8 +44,8 @@ def load_config(config_path):
 
 def get_expected_seeds(image_id, noise_sigma, trial, base_seed=20260908):
     """Deterministic seed formulas for sensing and noise."""
-    sensing_seed = base_seed + int(trial)
     clean_id = int(str(image_id).replace("test", "").lstrip("0") or "0")
+    sensing_seed = base_seed + clean_id * 1000000 + int(noise_sigma) * 1000 + int(trial)
     noise_seed = base_seed + int(trial) * 100000 + int(noise_sigma) * 1000 + clean_id
     return sensing_seed, noise_seed
 
@@ -177,7 +177,9 @@ def audit_and_merge(
     if not df_a.empty:
         for _, r in df_a.iterrows():
             exp_sens, exp_noise = get_expected_seeds(r["image_id"], r["noise_sigma"], r["trial"], base_seed)
-            if int(r.get("seed_sensing", exp_sens)) != exp_sens or int(r.get("seed_noise", exp_noise)) != exp_noise:
+            act_sens = r.get("sensing_seed", r.get("seed_sensing", exp_sens))
+            act_noise = r.get("noise_seed", r.get("seed_noise", exp_noise))
+            if int(act_sens) != exp_sens or int(act_noise) != exp_noise:
                 seed_pass_a = False
                 break
 
@@ -185,7 +187,9 @@ def audit_and_merge(
     if not df_b.empty:
         for _, r in df_b.iterrows():
             exp_sens, exp_noise = get_expected_seeds(r["image_id"], r["noise_sigma"], r["trial"], base_seed)
-            if int(r.get("seed_sensing", exp_sens)) != exp_sens or int(r.get("seed_noise", exp_noise)) != exp_noise:
+            act_sens = r.get("sensing_seed", r.get("seed_sensing", exp_sens))
+            act_noise = r.get("noise_seed", r.get("seed_noise", exp_noise))
+            if int(act_sens) != exp_sens or int(act_noise) != exp_noise:
                 seed_pass_b = False
                 break
 
@@ -247,7 +251,7 @@ def audit_and_merge(
                 "mean_iterations": grp["iteration_count"].mean() if "iteration_count" in grp else np.nan,
             }
             if "active_support_ratio" in grp.columns:
-                row["mean_active_support_ratio"] = grp["active_support_ratio"].mean()
+                row["mean_active_support_ratio"] = pd.to_numeric(grp["active_support_ratio"], errors="coerce").mean()
             summary_rows.append(row)
         summary_df = pd.DataFrame(summary_rows)
         summary_df.to_csv(combined_summary_path, index=False)

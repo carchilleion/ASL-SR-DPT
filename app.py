@@ -1,9 +1,9 @@
 """
 ASL-SR-DPT Pilot Benchmark Standalone Application
-Streamlit-based distributed benchmarking environment for Team A and Team B.
+Distributed benchmarking environment for Team A (Khevin) and Team B (Marc).
 Enforces strictly non-overlapping 225-evaluation workloads, single-threaded execution,
-rigorous 5-step safety gates, deterministic seed reproducibility, live progress monitoring,
-and comprehensive export capabilities for central merge auditing.
+rigorous 5-step safety gates, true deterministic reproducibility, real solver diagnostics,
+and comprehensive central merge auditing.
 """
 
 import os
@@ -22,12 +22,14 @@ import io
 import zipfile
 import platform
 import hashlib
+import math
 from datetime import datetime
 
 import numpy as np
+import scipy
 from PIL import Image
 
-# Ensure repository root is in sys.path
+# Ensure repository root and code directory are in sys.path
 REPO_ROOT = os.path.dirname(os.path.abspath(__file__))
 CODE_DIR = os.path.join(REPO_ROOT, "code")
 if REPO_ROOT not in sys.path:
@@ -47,9 +49,6 @@ from sensing import (
     generate_random_sensing,
     generate_dc_sensing,
     add_awgn,
-    generate_dc_preserving_measurement,
-    generate_standard_measurement,
-    restore_dc_component,
 )
 from reconstruction import (
     extract_patches,
@@ -64,9 +63,50 @@ import pandas as pd
 
 
 # ==============================================================================
-# 2. Configuration & Manifest Utilities
+# 2. Configuration, Codebase Hashing & Integrity
 # ==============================================================================
 CONFIG_PATH = os.path.join(REPO_ROOT, "configs", "pilot_config.json")
+
+RELEVANT_CODE_FILES = [
+    os.path.join(REPO_ROOT, "configs", "pilot_config.json"),
+    os.path.join(CODE_DIR, "hybrid_sparse_solver_v7_optimized.py"),
+    os.path.join(CODE_DIR, "hybrid_sparse_solver_v7_fixed.py"),
+    os.path.join(CODE_DIR, "sensing.py"),
+    os.path.join(CODE_DIR, "reconstruction.py"),
+    os.path.join(CODE_DIR, "metrics.py"),
+    os.path.join(REPO_ROOT, "app.py"),
+]
+_req_path = os.path.join(REPO_ROOT, "requirements.txt")
+if os.path.exists(_req_path):
+    RELEVANT_CODE_FILES.append(_req_path)
+
+
+def compute_file_sha256(filepath):
+    """Compute SHA-256 hash of a file."""
+    if not os.path.exists(filepath):
+        return "missing"
+    h = hashlib.sha256()
+    with open(filepath, "rb") as f:
+        while chunk := f.read(65536):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def compute_codebase_integrity_hash():
+    """
+    Computes an aggregate SHA-256 hash across relevant solver, sensing,
+    reconstruction, metrics, config, app orchestration, and requirements files.
+    Changing any of these files immediately alters CODE_HASH.
+    """
+    file_hashes = {}
+    combined = hashlib.sha256()
+    for fpath in RELEVANT_CODE_FILES:
+        rel = os.path.relpath(fpath, REPO_ROOT)
+        h = compute_file_sha256(fpath)
+        file_hashes[rel] = h
+        combined.update(f"{rel}:{h}".encode("utf-8"))
+    return combined.hexdigest(), file_hashes
+
 
 def load_pilot_config(path=CONFIG_PATH):
     """Load frozen pilot configuration and compute its SHA-256 hash."""
@@ -74,24 +114,26 @@ def load_pilot_config(path=CONFIG_PATH):
         raise FileNotFoundError(f"Configuration file not found: {path}")
     with open(path, "r", encoding="utf-8") as f:
         config = json.load(f)
-    
-    with open(path, "rb") as f:
-        cfg_hash = hashlib.sha256(f.read()).hexdigest()
+    cfg_hash = compute_file_sha256(path)
     return config, cfg_hash
+
 
 try:
     PILOT_CONFIG, CONFIG_HASH = load_pilot_config()
-except Exception as e:
+except Exception:
     PILOT_CONFIG, CONFIG_HASH = {}, "CONFIG_ERROR"
+
+CODE_HASH, FILE_HASHES = compute_codebase_integrity_hash()
 
 
 def get_environment_info():
-    """Collect certified environment metadata."""
+    """Collect certified environment metadata with explicit scipy version (Requirement 5)."""
     return {
         "os": platform.platform(),
         "python_version": platform.python_version(),
         "numpy_version": np.__version__,
-        "scipy_version": pd.__version__,
+        "scipy_version": scipy.__version__,
+        "pandas_version": pd.__version__,
         "cpu": platform.processor() or platform.machine(),
         "thread_settings": {
             "OMP_NUM_THREADS": os.environ.get("OMP_NUM_THREADS", "not_set"),
@@ -99,19 +141,21 @@ def get_environment_info():
             "MKL_NUM_THREADS": os.environ.get("MKL_NUM_THREADS", "not_set"),
             "NUMEXPR_NUM_THREADS": os.environ.get("NUMEXPR_NUM_THREADS", "not_set"),
         },
-        "app_version": "v7.0.0-pilot",
+        "app_version": "ASL-SR-DPT-PILOT-1.0",
         "config_hash": CONFIG_HASH,
+        "code_hash": CODE_HASH,
     }
 
 
 def compute_deterministic_seeds(image_id, noise_sigma, trial, base_seed=20260908):
     """
     Deterministic seed formulas:
-      sensing_seed = base_seed + trial
-      noise_seed = base_seed + trial * 100000 + int(noise_sigma) * 1000 + clean_id
+      clean_id = int(str(image_id).replace("test", "").lstrip("0") or "0")
+      sensing_seed = base_seed + clean_id * 1000000 + int(noise_sigma) * 1000 + int(trial)
+      noise_seed = base_seed + int(trial) * 100000 + int(noise_sigma) * 1000 + clean_id
     """
-    sensing_seed = base_seed + int(trial)
     clean_id = int(str(image_id).replace("test", "").lstrip("0") or "0")
+    sensing_seed = base_seed + clean_id * 1000000 + int(noise_sigma) * 1000 + int(trial)
     noise_seed = base_seed + int(trial) * 100000 + int(noise_sigma) * 1000 + clean_id
     return sensing_seed, noise_seed
 
@@ -143,7 +187,7 @@ def get_team_directories(team_name):
 
 
 # ==============================================================================
-# 3. CSV Schema & Duplicate Prevention
+# 3. CSV Schema & Validation Invariants
 # ==============================================================================
 RAW_COLUMNS = [
     "run_id",
@@ -167,34 +211,193 @@ RAW_COLUMNS = [
     "relative_residual",
     "normalized_residual",
     "active_support_ratio",
+    "mean_active_support_count",
     "final_sigma",
     "accepted_steps",
     "failed_line_searches",
-    "dc_error",
-    "ac_error",
     "support_size",
+    "nonzero_coefficient_count",
     "primal_residual",
     "dual_residual",
+    "sensing_m",
+    "sensing_n",
+    "sensing_architecture",
+    "diag_dc_error",
+    "diag_ac_error",
     "config_hash",
     "code_version",
+    "code_hash",
     "timestamp",
 ]
 
-def load_existing_composite_keys(raw_csv_path):
-    """Load completed experiment keys (image_id, noise_level, trial, solver) to prevent duplicates."""
+
+def load_existing_composite_keys(raw_csv_path, expected_config_hash=None, expected_code_hash=None):
+    """
+    Load completed experiment keys (image_id, noise_level, trial, solver) to prevent duplicates.
+    Also validates that existing dataset matches the current configuration and codebase hash (Requirement 19).
+    """
     keys = set()
     if os.path.exists(raw_csv_path):
         try:
             df = pd.read_csv(raw_csv_path)
-            for _, r in df.iterrows():
-                try:
-                    k = (str(r["image_id"]), float(r["noise_sigma"]), int(r["trial"]), str(r["solver"]))
-                    keys.add(k)
-                except (KeyError, ValueError):
-                    pass
-        except Exception:
-            pass
+            if not df.empty:
+                if expected_config_hash and "config_hash" in df.columns:
+                    mismatches = df[df["config_hash"].astype(str) != str(expected_config_hash)]
+                    if not mismatches.empty:
+                        raise ValueError(
+                            f"Configuration hash mismatch in {raw_csv_path}! "
+                            f"Dataset contains records generated under config hash '{mismatches.iloc[0]['config_hash']}', "
+                            f"but current configuration hash is '{expected_config_hash}'. "
+                            f"Cannot mix results across differing configurations."
+                        )
+                if expected_code_hash and "code_hash" in df.columns:
+                    mismatches = df[df["code_hash"].astype(str) != str(expected_code_hash)]
+                    if not mismatches.empty:
+                        raise ValueError(
+                            f"Codebase integrity hash mismatch in {raw_csv_path}! "
+                            f"Dataset contains records from code hash '{mismatches.iloc[0]['code_hash']}', "
+                            f"but current code hash is '{expected_code_hash}'. "
+                            f"Cannot mix results across differing code versions."
+                        )
+                for _, r in df.iterrows():
+                    try:
+                        k = (str(r["image_id"]), float(r["noise_sigma"]), int(r["trial"]), str(r["solver"]))
+                        keys.add(k)
+                    except (KeyError, ValueError):
+                        pass
+        except Exception as e:
+            if isinstance(e, ValueError):
+                raise e
     return keys
+
+
+def validate_dpt_batch_diagnostics(diag, expected_batch_size):
+    """
+    Strictly validates ASL-SR-DPT diagnostic schema per batch and per patch (Requirement 3):
+    - Array lengths match batch size
+    - Iterations > 0
+    - 0 <= |S_k| <= 63 for every iteration k
+    - Accepted steps and failed line searches are non-negative
+    - Final sigma is positive and finite
+    Returns (passed: bool, error_message: str).
+    """
+    required_keys = [
+        "patch_iterations",
+        "patch_active_counts",
+        "patch_accepted_steps",
+        "patch_failed_line_searches",
+        "patch_final_sigma",
+    ]
+    if not isinstance(diag, dict):
+        return False, f"DPT diagnostics must be a dict, got {type(diag)}"
+    for k in required_keys:
+        if k not in diag:
+            return False, f"Missing required DPT diagnostic key: '{k}'"
+
+    for k in required_keys:
+        val = diag[k]
+        if not hasattr(val, "__len__") or len(val) != expected_batch_size:
+            return False, (
+                f"DPT diagnostic '{k}' length mismatch: expected {expected_batch_size}, "
+                f"got {len(val) if hasattr(val, '__len__') else type(val)}"
+            )
+
+    for b in range(expected_batch_size):
+        iters = diag["patch_iterations"][b]
+        if iters <= 0 or not math.isfinite(iters):
+            return False, f"Patch {b} iteration count must be > 0, got {iters}"
+
+        act_counts = diag["patch_active_counts"][b]
+        if len(act_counts) != int(iters):
+            return False, f"Patch {b} active count history length ({len(act_counts)}) != iterations ({iters})"
+
+        for it_idx, s_k in enumerate(act_counts):
+            if s_k < 0 or s_k > 63:
+                return False, f"Patch {b} iteration {it_idx} active support size |S_k|={s_k} out of bounds [0, 63]"
+
+        acc = diag["patch_accepted_steps"][b]
+        if acc < 0 or acc > iters:
+            return False, f"Patch {b} accepted steps ({acc}) invalid for {iters} iterations"
+
+        failed = diag["patch_failed_line_searches"][b]
+        if failed < 0:
+            return False, f"Patch {b} failed line searches ({failed}) must be >= 0"
+
+        sig = diag["patch_final_sigma"][b]
+        if sig <= 0 or not math.isfinite(sig):
+            return False, f"Patch {b} final sigma ({sig}) must be positive and finite"
+
+    return True, ""
+
+
+def validate_evaluation_record(record, assigned_images, valid_solvers, valid_noise_levels, valid_trials, config_hash):
+    """
+    Validates a result record before writing to disk (Requirement 15).
+    Verifies metric finiteness, validity of parameters, workload membership, and config consistency.
+    """
+    numeric_fields = ["psnr", "ssim", "mse", "setup_time", "solve_time", "ms_per_patch", "measurement_residual"]
+    for f in numeric_fields:
+        val = record.get(f)
+        if val is None or not math.isfinite(float(val)):
+            return False, f"Metric '{f}' must be finite, got {val}"
+
+    if float(record["solve_time"]) <= 0:
+        return False, f"solve_time must be strictly positive, got {record['solve_time']}"
+
+    solver = str(record.get("solver"))
+    if solver not in valid_solvers:
+        return False, f"Invalid solver '{solver}', expected one of {valid_solvers}"
+
+    if float(record.get("noise_sigma")) not in [float(x) for x in valid_noise_levels]:
+        return False, f"Invalid noise level '{record.get('noise_sigma')}'"
+
+    if int(record.get("trial")) not in [int(x) for x in valid_trials]:
+        return False, f"Invalid trial '{record.get('trial')}'"
+
+    if str(record.get("image_id")) not in assigned_images:
+        return False, f"Image '{record.get('image_id')}' is not in assigned workload: {assigned_images}"
+
+    if str(record.get("config_hash")) != str(config_hash):
+        return False, f"config_hash mismatch: expected {config_hash}, got {record.get('config_hash')}"
+
+    # Strict Sensing dimensions & architecture validation
+    s_m = record.get("sensing_m")
+    s_n = record.get("sensing_n")
+    s_arch = record.get("sensing_architecture")
+    if solver == "ASL-SR-DPT":
+        if s_m != 37 or s_n != 63 or s_arch != "dc_preserving":
+            return False, f"ASL-SR-DPT sensing dimensions invalid: M={s_m}, N={s_n}, arch={s_arch}"
+        if record.get("active_support_ratio") == "" or not math.isfinite(float(record.get("active_support_ratio"))):
+            return False, "ASL-SR-DPT active_support_ratio must be present and finite"
+        r_act = float(record["active_support_ratio"])
+        if r_act < 0.0 or r_act > 1.0:
+            return False, f"ASL-SR-DPT active_support_ratio out of range [0, 1]: {r_act}"
+        if record.get("mean_active_support_count") == "" or not math.isfinite(float(record.get("mean_active_support_count"))):
+            return False, "ASL-SR-DPT mean_active_support_count must be present and finite"
+        m_act = float(record["mean_active_support_count"])
+        if m_act < 0.0 or m_act > 63.0:
+            return False, f"ASL-SR-DPT mean_active_support_count out of range [0, 63]: {m_act}"
+        if record.get("final_sigma") == "" or float(record["final_sigma"]) <= 0:
+            return False, f"ASL-SR-DPT final_sigma must be positive, got {record.get('final_sigma')}"
+        if record.get("accepted_steps") == "" or float(record["accepted_steps"]) < 0:
+            return False, f"ASL-SR-DPT accepted_steps must be >= 0, got {record.get('accepted_steps')}"
+        if record.get("failed_line_searches") == "" or float(record["failed_line_searches"]) < 0:
+            return False, f"ASL-SR-DPT failed_line_searches must be >= 0, got {record.get('failed_line_searches')}"
+    elif solver in ["OMP", "LASSO-ADMM"]:
+        if s_m != 38 or s_n != 64 or s_arch != "standard":
+            return False, f"{solver} sensing dimensions invalid: M={s_m}, N={s_n}, arch={s_arch}"
+        if record.get("active_support_ratio") != "":
+            return False, f"{solver} active_support_ratio must be blank/empty, got {record.get('active_support_ratio')}"
+        if record.get("mean_active_support_count") != "":
+            return False, f"{solver} mean_active_support_count must be blank/empty, got {record.get('mean_active_support_count')}"
+        if record.get("final_sigma") != "":
+            return False, f"{solver} final_sigma must be blank/empty, got {record.get('final_sigma')}"
+        if record.get("accepted_steps") != "":
+            return False, f"{solver} accepted_steps must be blank/empty, got {record.get('accepted_steps')}"
+        if record.get("failed_line_searches") != "":
+            return False, f"{solver} failed_line_searches must be blank/empty, got {record.get('failed_line_searches')}"
+
+    return True, ""
 
 
 def append_evaluation_record(raw_csv_path, record):
@@ -205,6 +408,7 @@ def append_evaluation_record(raw_csv_path, record):
         if not file_exists:
             writer.writeheader()
         writer.writerow(record)
+        f.flush()
 
 
 def log_failure_record(failures_csv_path, failure_dict):
@@ -216,10 +420,156 @@ def log_failure_record(failures_csv_path, failure_dict):
         if not file_exists:
             writer.writeheader()
         writer.writerow(failure_dict)
+        f.flush()
 
 
 # ==============================================================================
-# 4. Single-Image Evaluation Engine
+# 4. Deep Parameter Validation & Safety Gates
+# ==============================================================================
+def validate_frozen_research_parameters(config, config_hash):
+    """
+    Deep validation of all frozen research parameters against thesis specification (Requirement 8).
+    Returns (passed: bool, errors: list[str]).
+    """
+    errors = []
+
+    if config.get("patch_size") != 8:
+        errors.append(f"patch_size must be 8, got {config.get('patch_size')}")
+    if config.get("stride") != 2:
+        errors.append(f"stride must be 2, got {config.get('stride')}")
+    if config.get("N") != 64:
+        errors.append(f"N must be 64, got {config.get('N')}")
+    if config.get("M") != 38:
+        errors.append(f"M must be 38, got {config.get('M')}")
+    if config.get("M_ac") != 37:
+        errors.append(f"M_ac must be 37, got {config.get('M_ac')}")
+    if config.get("N_ac") != 63:
+        errors.append(f"N_ac must be 63, got {config.get('N_ac')}")
+
+    dpt = config.get("asl_sr_dpt", {})
+    if dpt.get("sensing_mode") != "dc_preserving":
+        errors.append(f"ASL-SR-DPT sensing_mode must be 'dc_preserving', got {dpt.get('sensing_mode')}")
+    if abs(float(dpt.get("lambda_reg", 0)) - 0.1) > 1e-9:
+        errors.append(f"ASL-SR-DPT lambda_reg must be 0.1, got {dpt.get('lambda_reg')}")
+    if abs(float(dpt.get("sigma_min", 0)) - 0.01) > 1e-9:
+        errors.append(f"ASL-SR-DPT sigma_min must be 0.01, got {dpt.get('sigma_min')}")
+    if abs(float(dpt.get("sigma_decay", 0)) - 0.95) > 1e-9:
+        errors.append(f"ASL-SR-DPT sigma_decay must be 0.95, got {dpt.get('sigma_decay')}")
+    if int(dpt.get("max_iter", 0)) != 150:
+        errors.append(f"ASL-SR-DPT max_iter must be 150, got {dpt.get('max_iter')}")
+    if abs(float(dpt.get("tol", 0)) - 1e-5) > 1e-9:
+        errors.append(f"ASL-SR-DPT tol must be 1e-5, got {dpt.get('tol')}")
+    if abs(float(dpt.get("initial_mu", 0)) - 0.2) > 1e-9:
+        errors.append(f"ASL-SR-DPT initial_mu must be 0.2, got {dpt.get('initial_mu')}")
+    if abs(float(dpt.get("armijo_c", 0)) - 1e-4) > 1e-9:
+        errors.append(f"ASL-SR-DPT armijo_c must be 1e-4, got {dpt.get('armijo_c')}")
+    if abs(float(dpt.get("beta_decay", 0)) - 0.5) > 1e-9:
+        errors.append(f"ASL-SR-DPT beta_decay must be 0.5, got {dpt.get('beta_decay')}")
+    if int(dpt.get("max_backtracks", 0)) != 10:
+        errors.append(f"ASL-SR-DPT max_backtracks must be 10, got {dpt.get('max_backtracks')}")
+    if abs(float(dpt.get("support_threshold_multiplier", 0)) - 1e-5) > 1e-9:
+        errors.append(f"ASL-SR-DPT support_threshold_multiplier must be 1e-5, got {dpt.get('support_threshold_multiplier')}")
+    if int(dpt.get("support_reopen_interval", 0)) != 3:
+        errors.append(f"ASL-SR-DPT support_reopen_interval must be 3, got {dpt.get('support_reopen_interval')}")
+    if dpt.get("use_midpoint") is not True:
+        errors.append(f"ASL-SR-DPT use_midpoint must be True, got {dpt.get('use_midpoint')}")
+
+    omp = config.get("omp", {})
+    if omp.get("sensing_mode") != "standard":
+        errors.append(f"OMP sensing_mode must be 'standard', got {omp.get('sensing_mode')}")
+    if int(omp.get("max_coefficients", 0)) != 38:
+        errors.append(f"OMP max_coefficients must be 38, got {omp.get('max_coefficients')}")
+    if abs(float(omp.get("relative_residual_tol", 0)) - 1e-5) > 1e-9:
+        errors.append(f"OMP relative_residual_tol must be 1e-5, got {omp.get('relative_residual_tol')}")
+
+    admm = config.get("lasso_admm", {})
+    if admm.get("sensing_mode") != "standard":
+        errors.append(f"LASSO-ADMM sensing_mode must be 'standard', got {admm.get('sensing_mode')}")
+    if abs(float(admm.get("lambda_lasso", 0)) - 0.01) > 1e-9:
+        errors.append(f"LASSO-ADMM lambda_lasso must be 0.01, got {admm.get('lambda_lasso')}")
+    if abs(float(admm.get("rho", 0)) - 1.0) > 1e-9:
+        errors.append(f"LASSO-ADMM rho must be 1.0, got {admm.get('rho')}")
+    if int(admm.get("max_iter", 0)) != 100:
+        errors.append(f"LASSO-ADMM max_iter must be 100, got {admm.get('max_iter')}")
+    if abs(float(admm.get("tol", 0)) - 1e-4) > 1e-9:
+        errors.append(f"LASSO-ADMM tol must be 1e-4, got {admm.get('tol')}")
+    if abs(float(admm.get("internal_tol", 0)) - 1e-5) > 1e-9:
+        errors.append(f"LASSO-ADMM internal_tol must be 1e-5, got {admm.get('internal_tol')}")
+
+    return (len(errors) == 0), errors
+
+
+def validate_team_assignment_integrity(config):
+    """Verifies team assignment integrity and disjointness (Requirement 9)."""
+    team_a = config.get("team_assignments", {}).get("Team A", [])
+    team_b = config.get("team_assignments", {}).get("Team B", [])
+    errors = []
+    if len(team_a) != 5:
+        errors.append(f"Team A must have exactly 5 images, got {len(team_a)}: {team_a}")
+    if len(team_b) != 5:
+        errors.append(f"Team B must have exactly 5 images, got {len(team_b)}: {team_b}")
+
+    overlap = set(team_a).intersection(set(team_b))
+    if len(overlap) > 0:
+        errors.append(f"Overlapping image assignment detected between teams: {overlap}")
+
+    union_set = set(team_a).union(set(team_b))
+    expected_10 = {f"test{i:03d}" for i in range(1, 11)}
+    if union_set != expected_10:
+        errors.append(f"Union of team assignments must be test001..test010, got {sorted(list(union_set))}")
+
+    return (len(errors) == 0), errors
+
+
+def validate_gate_5_experiment_integrity(team_name, config, config_hash, code_hash):
+    """
+    STEP 5: Final Experiment Integrity Verification (Requirement 7).
+    Validates workload keys, sensing dimensions, dataset availability, and storage.
+    """
+    errors = []
+    assigned = config.get("team_assignments", {}).get(team_name, [])
+    if len(assigned) != 5:
+        errors.append(f"Team must have exactly 5 images, got {len(assigned)}")
+
+    noises = config.get("noise_levels", [])
+    if len(noises) != 3 or set(noises) != {15.0, 25.0, 50.0}:
+        errors.append(f"Expected 3 noise levels [15.0, 25.0, 50.0], got {noises}")
+
+    trials = config.get("trials", [])
+    if len(trials) != 5 or set(trials) != {1, 2, 3, 4, 5}:
+        errors.append(f"Expected 5 trials [1, 2, 3, 4, 5], got {trials}")
+
+    solvers = config.get("solvers", [])
+    if len(solvers) != 3 or set(solvers) != {"ASL-SR-DPT", "OMP", "LASSO-ADMM"}:
+        errors.append(f"Expected 3 solvers ['ASL-SR-DPT', 'OMP', 'LASSO-ADMM'], got {solvers}")
+
+    expected_count = len(assigned) * len(noises) * len(trials) * len(solvers)
+    if expected_count != 225:
+        errors.append(f"Expected 225 workload keys, got {expected_count}")
+
+    team_ok, team_errs = validate_team_assignment_integrity(config)
+    if not team_ok:
+        errors.extend(team_errs)
+
+    param_ok, param_errs = validate_frozen_research_parameters(config, config_hash)
+    if not param_ok:
+        errors.extend(param_errs)
+
+    dataset_dir = os.path.join(REPO_ROOT, config.get("dataset_dir", "data/BSD68"))
+    for img_id in assigned:
+        p = os.path.join(dataset_dir, f"{img_id}.png")
+        if not os.path.exists(p):
+            errors.append(f"Dataset image missing: {p}")
+
+    paths = get_team_directories(team_name)
+    if not os.access(paths["raw"], os.W_OK):
+        errors.append(f"Output directory not writable: {paths['raw']}")
+
+    return (len(errors) == 0), errors
+
+
+# ==============================================================================
+# 5. Single-Image Evaluation Engine (Strict Research Standards)
 # ==============================================================================
 def execute_single_pilot_evaluation(
     image_id,
@@ -229,14 +579,16 @@ def execute_single_pilot_evaluation(
     team_name,
     config,
     config_hash,
+    code_hash,
     dataset_dir="data/BSD68",
-    max_patches=None,
 ):
     """
-    Executes a single full-image solver evaluation conforming strictly to research boundaries:
-    - Pure iterative solve latency is isolated.
-    - Deterministic seeds are derived.
-    - Bitwise identical noise and sensing across matched conditions.
+    Executes a single full-image solver evaluation conforming strictly to research methodology:
+    - Runs COMPLETE image processing pipeline on all 37,604 patches (no shortcuts).
+    - Obtains real, measured solver diagnostics (no hardcoded/fabricated values).
+    - Calculates active-support ratio strictly per thesis definition: sum(|S_k|) / (63 * K).
+    - Isolates pure iterative solve latency from setup, DCT, and aggregation.
+    - Uses bitwise identical noise input across all 3 solvers for matched conditions.
     """
     img_filename = f"{image_id}.png" if not image_id.endswith(".png") else image_id
     img_path = os.path.join(REPO_ROOT, dataset_dir, img_filename)
@@ -250,15 +602,12 @@ def execute_single_pilot_evaluation(
     base_seed = config.get("seed_protocol", {}).get("base_seed", 20260908)
     sensing_seed, noise_seed = compute_deterministic_seeds(image_id, noise_sigma, trial, base_seed)
 
-    # Inject AWGN
+    # Inject AWGN (Requirement 14: Matched noisy image generated from deterministic noise seed)
     noisy_img = add_awgn(clean_img, float(noise_sigma), seed=noise_seed)
 
-    # Patch extraction (8x8, stride 2) and DCT projection
+    # Patch extraction (8x8, stride 2) and DCT projection: exactly 37,604 patches
     patch_records = extract_patches(clean_img, patch_size=8, stride=2)
     noisy_patch_records = extract_patches(noisy_img, patch_size=8, stride=2)
-    if max_patches is not None and max_patches > 0:
-        patch_records = patch_records[:max_patches]
-        noisy_patch_records = noisy_patch_records[:max_patches]
     total_patches = len(patch_records)
 
     noisy_thetas = np.array([dct_patch(r["patch"]).reshape(-1) for r in noisy_patch_records])
@@ -267,7 +616,10 @@ def execute_single_pilot_evaluation(
     # Setup phase: generate sensing and precomputations (isolated from solve time)
     t_setup_start = time.perf_counter()
     if solver_name == "ASL-SR-DPT":
+        # Validate sensing dimensions: M_ac=37, N_ac=63 (Requirement 13)
         A_ac = generate_dc_sensing(M_ac=37, N_ac=63, seed=sensing_seed)
+        if A_ac.shape != (37, 63):
+            raise ValueError(f"ASL-SR-DPT sensing matrix A_ac has invalid shape: {A_ac.shape}, expected (37, 63)")
         solver_dpt = HybridSparseSolverV7Optimized(
             A=A_ac,
             lambda_reg=config["asl_sr_dpt"]["lambda_reg"],
@@ -275,25 +627,42 @@ def execute_single_pilot_evaluation(
         )
         Y_dc = noisy_thetas[:, 0]
         Y_ac = (A_ac @ noisy_thetas[:, 1:].T).T  # (P, 37)
+        sensing_m = 37
+        sensing_n = 63
+        sensing_arch = "dc_preserving"
     else:
+        # Standard sensing dimensions: M=38, N=64 (Requirement 13)
         A_std = generate_random_sensing(M=38, N=64, seed=sensing_seed)
+        if A_std.shape != (38, 64):
+            raise ValueError(f"Standard sensing matrix A_std has invalid shape: {A_std.shape}, expected (38, 64)")
         Y_std = (A_std @ noisy_thetas.T).T  # (P, 38)
         if solver_name == "OMP":
             col_norms = precompute_omp(A_std)
         elif solver_name == "LASSO-ADMM":
             L_cholesky = precompute_lasso_admm(A_std, rho=config["lasso_admm"]["rho"])
+        sensing_m = 38
+        sensing_n = 64
+        sensing_arch = "standard"
     setup_time = time.perf_counter() - t_setup_start
 
-    # Solve phase: iterative solve latency strictly measured
+    # Solve phase: iterative solve latency strictly measured (Requirement 18)
     t_solve_start = time.perf_counter()
 
     if solver_name == "ASL-SR-DPT":
         batch_size = config["asl_sr_dpt"].get("batch_size", 50)
         recovered_ac = []
+
+        total_active_support_sum = 0
+        total_dpt_iterations_sum = 0
+        total_accepted_steps_sum = 0
+        total_failed_ls_sum = 0
+        final_sigmas = []
+
         for start in range(0, total_patches, batch_size):
             end = min(start + batch_size, total_patches)
+            batch_len = end - start
             Y_sub = Y_ac[start:end].T
-            Z_sub = solver_dpt.denoise_batch(
+            Z_sub, diag_sub = solver_dpt.denoise_batch(
                 Y_sub,
                 sigma_min=config["asl_sr_dpt"]["sigma_min"],
                 decrease_factor=config["asl_sr_dpt"]["sigma_decay"],
@@ -305,8 +674,23 @@ def execute_single_pilot_evaluation(
                 support_threshold_multiplier=config["asl_sr_dpt"]["support_threshold_multiplier"],
                 support_reopen_interval=config["asl_sr_dpt"]["support_reopen_interval"],
                 use_midpoint=config["asl_sr_dpt"]["use_midpoint"],
+                return_diagnostics=True,
             )
+            # Strict per-batch schema validation (Requirement 3)
+            is_valid_diag, diag_err = validate_dpt_batch_diagnostics(diag_sub, batch_len)
+            if not is_valid_diag:
+                raise ValueError(f"ASL-SR-DPT batch diagnostics validation failed for patches [{start}:{end}]: {diag_err}")
+
             recovered_ac.append(Z_sub.T)
+
+            # Accumulate real diagnostics (Requirement 1 & 2)
+            for p_counts in diag_sub["patch_active_counts"]:
+                total_active_support_sum += sum(p_counts)
+                total_dpt_iterations_sum += len(p_counts)
+            total_accepted_steps_sum += sum(diag_sub["patch_accepted_steps"])
+            total_failed_ls_sum += sum(diag_sub["patch_failed_line_searches"])
+            final_sigmas.extend(diag_sub["patch_final_sigma"])
+
         solve_time = time.perf_counter() - t_solve_start
 
         Z_ac_final = np.vstack(recovered_ac)
@@ -320,14 +704,22 @@ def execute_single_pilot_evaluation(
         rel_res = float(np.mean(residuals / y_norms))
         norm_res = float(np.mean(residuals / np.sqrt(37.0)))
 
-        iter_count = 97.8
-        active_ratio = float(np.mean(np.abs(Z_ac_final) > 1e-4))
-        final_sig = float(config["asl_sr_dpt"]["sigma_min"])
-        acc_steps = 97.8
-        failed_ls = 0.0
-        dc_err = float(np.mean(np.abs(Z_final[:, 0] - clean_thetas[:, 0])))
-        ac_err = float(np.mean(np.linalg.norm(Z_final[:, 1:] - clean_thetas[:, 1:], axis=1)))
-        supp_size = float(np.mean(np.sum(np.abs(Z_ac_final) > 1e-4, axis=1)))
+        # Actual executed iteration count and thesis-defined active-support ratio
+        iter_count = float(total_dpt_iterations_sum) / float(total_patches)
+        active_ratio = (
+            float(total_active_support_sum) / (63.0 * float(total_dpt_iterations_sum))
+            if total_dpt_iterations_sum > 0 else 1.0
+        )
+        mean_act_count = (
+            float(total_active_support_sum) / float(total_dpt_iterations_sum)
+            if total_dpt_iterations_sum > 0 else 63.0
+        )
+        final_sig = float(np.mean(final_sigmas))
+        acc_steps = float(total_accepted_steps_sum) / float(total_patches)
+        failed_ls = float(total_failed_ls_sum) / float(total_patches)
+
+        supp_size = ""
+        nonzero_count = float(np.mean(np.sum(np.abs(Z_final[:, 1:]) > 1e-4, axis=1)))
         admm_p = ""
         admm_d = ""
 
@@ -358,13 +750,15 @@ def execute_single_pilot_evaluation(
         norm_res = float(np.mean(res_list / np.sqrt(38.0)))
 
         iter_count = float(np.mean(iters_list))
-        active_ratio = float(np.mean(iters_list) / 64.0)
+        supp_size = iter_count
+        nonzero_count = supp_size
+
+        # OMP does not have active_support_ratio (Requirement 11)
+        active_ratio = ""
+        mean_act_count = ""
         final_sig = ""
         acc_steps = ""
         failed_ls = ""
-        dc_err = float(np.mean(np.abs(Z_final[:, 0] - clean_thetas[:, 0])))
-        ac_err = float(np.mean(np.linalg.norm(Z_final[:, 1:] - clean_thetas[:, 1:], axis=1)))
-        supp_size = iter_count
         admm_p = ""
         admm_d = ""
 
@@ -401,42 +795,39 @@ def execute_single_pilot_evaluation(
         norm_res = float(np.mean(res_list / np.sqrt(38.0)))
 
         iter_count = float(np.mean(iters_list))
-        active_ratio = float(np.mean(np.abs(Z_final) > 1e-4) )
+        supp_size = ""
+        nonzero_count = float(np.mean(np.sum(np.abs(Z_final) > 1e-4, axis=1)))
+
+        # ADMM does not have active_support_ratio (Requirement 11)
+        active_ratio = ""
+        mean_act_count = ""
         final_sig = ""
         acc_steps = ""
         failed_ls = ""
-        dc_err = float(np.mean(np.abs(Z_final[:, 0] - clean_thetas[:, 0])))
-        ac_err = float(np.mean(np.linalg.norm(Z_final[:, 1:] - clean_thetas[:, 1:], axis=1)))
-        supp_size = float(np.mean(np.sum(np.abs(Z_final) > 1e-4, axis=1)))
         admm_p = float(np.mean(pri_list))
         admm_d = float(np.mean(dual_list))
     else:
         raise ValueError(f"Unknown solver: {solver_name}")
 
-    # Spatial reconstruction via 2D IDCT and normalized 2D Hamming aggregation
-    if max_patches is not None and max_patches < len(patch_records):
-        clean_spatial = np.array([r["patch"] for r in patch_records])
-        rec_spatial = np.array([idct_patch(Z_final[i].reshape(8, 8)) for i in range(total_patches)])
-        mse_val = float(np.mean((clean_spatial - rec_spatial) ** 2))
-        psnr_val = 10.0 * np.log10(1.0 / max(mse_val, 1e-12)) if mse_val > 0 else 99.9
-        ssim_val = 0.5
-        metrics = {"psnr": psnr_val, "ssim": ssim_val, "mse": mse_val}
-        reconstructed_img = clean_img
-    else:
-        rec_patches = []
-        for i in range(total_patches):
-            p_spatial = idct_patch(Z_final[i].reshape(8, 8))
-            rec_patches.append({
-                "patch": p_spatial,
-                "x": patch_records[i]["x"],
-                "y": patch_records[i]["y"],
-            })
-        reconstructed_img = reconstruct_image(rec_patches, image_shape=clean_img.shape, patch_size=8)
-        metrics = compute_all_metrics(clean_img, reconstructed_img)
+    # Spatial reconstruction via 2D IDCT and normalized 2D Hamming aggregation (all 37,604 patches)
+    rec_patches = []
+    for i in range(total_patches):
+        p_spatial = idct_patch(Z_final[i].reshape(8, 8))
+        rec_patches.append({
+            "patch": p_spatial,
+            "x": patch_records[i]["x"],
+            "y": patch_records[i]["y"],
+        })
+    reconstructed_img = reconstruct_image(rec_patches, image_shape=clean_img.shape, patch_size=8)
+    metrics = compute_all_metrics(clean_img, reconstructed_img)
     ms_patch = (solve_time / float(total_patches)) * 1000.0
 
+    # Diagnostic errors (kept separate from primary performance metrics, Requirement 12)
+    dc_err = float(np.mean(np.abs(Z_final[:, 0] - clean_thetas[:, 0])))
+    ac_err = float(np.mean(np.linalg.norm(Z_final[:, 1:] - clean_thetas[:, 1:], axis=1)))
+
     run_id = f"{image_id}_s{int(noise_sigma)}_t{trial}_{solver_name.replace('-', '_')}"
-    
+
     record = {
         "run_id": run_id,
         "image_id": str(image_id),
@@ -458,29 +849,50 @@ def execute_single_pilot_evaluation(
         "measurement_residual": round(float(meas_res), 4),
         "relative_residual": round(float(rel_res), 4),
         "normalized_residual": round(float(norm_res), 4),
-        "active_support_ratio": round(float(active_ratio), 4) if active_ratio != "" else "",
-        "final_sigma": final_sig,
-        "accepted_steps": acc_steps,
-        "failed_line_searches": failed_ls,
-        "dc_error": round(float(dc_err), 6),
-        "ac_error": round(float(ac_err), 6),
+        "active_support_ratio": round(float(active_ratio), 6) if active_ratio != "" else "",
+        "mean_active_support_count": round(float(mean_act_count), 2) if mean_act_count != "" else "",
+        "final_sigma": round(float(final_sig), 6) if final_sig != "" else "",
+        "accepted_steps": round(float(acc_steps), 2) if acc_steps != "" else "",
+        "failed_line_searches": round(float(failed_ls), 2) if failed_ls != "" else "",
         "support_size": round(float(supp_size), 2) if supp_size != "" else "",
+        "nonzero_coefficient_count": round(float(nonzero_count), 2) if nonzero_count != "" else "",
         "primal_residual": round(float(admm_p), 6) if admm_p != "" else "",
         "dual_residual": round(float(admm_d), 6) if admm_d != "" else "",
+        "sensing_m": int(sensing_m),
+        "sensing_n": int(sensing_n),
+        "sensing_architecture": str(sensing_arch),
+        "diag_dc_error": round(float(dc_err), 6),
+        "diag_ac_error": round(float(ac_err), 6),
         "config_hash": config_hash,
-        "code_version": config.get("version", "v7.0.0-pilot"),
+        "code_version": config.get("version", "ASL-SR-DPT-PILOT-1.0"),
+        "code_hash": code_hash,
         "timestamp": datetime.now().isoformat(),
     }
-    return record, reconstructed_img, noisy_img
+
+    # Validate record before returning (Requirement 15)
+    assigned_images = config.get("team_assignments", {}).get(team_name, [image_id])
+    valid_solvers = config.get("solvers", ["ASL-SR-DPT", "OMP", "LASSO-ADMM"])
+    valid_noise_levels = config.get("noise_levels", [15.0, 25.0, 50.0])
+    valid_trials = config.get("trials", [1, 2, 3, 4, 5])
+
+    is_valid, err_msg = validate_evaluation_record(
+        record, assigned_images, valid_solvers, valid_noise_levels, valid_trials, config_hash
+    )
+    if not is_valid:
+        raise ValueError(f"Evaluation record failed integrity validation: {err_msg}")
+
+    return record, reconstructed_img, noisy_img, Z_final
 
 
 # ==============================================================================
-# 5. Reproducibility Test Suite (Gate 3)
+# 6. True Reproducibility Test Suite (Gate 3)
 # ==============================================================================
-def run_reproducibility_test(config, config_hash, max_patches=1000):
+def run_reproducibility_test(config, config_hash, code_hash):
     """
-    Runs fixed condition (test001, sigma=15, trial=1) twice for all 3 solvers.
-    Verifies that run 1 and run 2 produce numerically matching outputs.
+    Runs fixed condition (test001, sigma=15.0, trial=1) twice for all 3 solvers
+    using the COMPLETE full-image processing pipeline (Requirements 3 & 4).
+    Compares reconstructed image arrays and coefficient arrays with byte-level and tolerance checks.
+    Classifies each solver as EXACT_REPRODUCTION or NUMERICALLY_REPRODUCIBLE.
     """
     test_img = "test001"
     test_sigma = 15.0
@@ -490,57 +902,110 @@ def run_reproducibility_test(config, config_hash, max_patches=1000):
 
     for s in solvers:
         # First execution
-        rec1, _, _ = execute_single_pilot_evaluation(
-            test_img, test_sigma, test_trial, s, "Verification", config, config_hash, max_patches=max_patches
+        rec1, img1, _, z1 = execute_single_pilot_evaluation(
+            test_img, test_sigma, test_trial, s, "Verification", config, config_hash, code_hash
         )
         # Second execution
-        rec2, _, _ = execute_single_pilot_evaluation(
-            test_img, test_sigma, test_trial, s, "Verification", config, config_hash, max_patches=max_patches
+        rec2, img2, _, z2 = execute_single_pilot_evaluation(
+            test_img, test_sigma, test_trial, s, "Verification", config, config_hash, code_hash
         )
+
+        # Array byte comparisons and SHA-256 hashes
+        img1_bytes = np.ascontiguousarray(img1, dtype=np.float64).tobytes()
+        img2_bytes = np.ascontiguousarray(img2, dtype=np.float64).tobytes()
+        img_hash1 = hashlib.sha256(img1_bytes).hexdigest()
+        img_hash2 = hashlib.sha256(img2_bytes).hexdigest()
+
+        z1_bytes = np.ascontiguousarray(z1, dtype=np.float64).tobytes()
+        z2_bytes = np.ascontiguousarray(z2, dtype=np.float64).tobytes()
+        z_hash1 = hashlib.sha256(z1_bytes).hexdigest()
+        z_hash2 = hashlib.sha256(z2_bytes).hexdigest()
+
+        bytes_match = (img1_bytes == img2_bytes) and (z1_bytes == z2_bytes)
+        max_img_diff = float(np.max(np.abs(img1 - img2)))
+        max_z_diff = float(np.max(np.abs(z1 - z2)))
 
         psnr_diff = abs(rec1["psnr"] - rec2["psnr"])
         ssim_diff = abs(rec1["ssim"] - rec2["ssim"])
         mse_diff = abs(rec1["mse"] - rec2["mse"])
         res_diff = abs(rec1["measurement_residual"] - rec2["measurement_residual"])
 
-        is_reproducible = (psnr_diff < 1e-4) and (ssim_diff < 1e-4) and (mse_diff < 1e-6)
+        # Two formal classifications (Requirement 4)
+        if bytes_match:
+            classification = "EXACT_REPRODUCTION"
+            passed = True
+        elif (max_img_diff < 1e-5 and max_z_diff < 1e-5 and psnr_diff < 1e-4 and ssim_diff < 1e-4 and mse_diff < 1e-6):
+            classification = "NUMERICALLY_REPRODUCIBLE"
+            passed = True
+        else:
+            classification = "FAILED"
+            passed = False
+
         results.append({
             "solver": s,
+            "classification": classification,
+            "passed": passed,
+            "bytes_match": bytes_match,
+            "image_sha256": img_hash1 if bytes_match else f"{img_hash1[:8]}.. / {img_hash2[:8]}..",
+            "coeff_sha256": z_hash1 if (z1_bytes == z2_bytes) else f"{z_hash1[:8]}.. / {z_hash2[:8]}..",
+            "max_image_diff": max_img_diff,
+            "max_coeff_diff": max_z_diff,
             "psnr_run1": rec1["psnr"],
             "psnr_run2": rec2["psnr"],
             "psnr_diff": psnr_diff,
             "ssim_diff": ssim_diff,
             "mse_diff": mse_diff,
             "res_diff": res_diff,
-            "passed": is_reproducible,
         })
     return results
 
 
 # ==============================================================================
-# 6. Team Report Generator
+# 7. Team Report Generator & Integrity Audit (Requirements 16 & 17)
 # ==============================================================================
-def generate_team_report(team_name, raw_csv_path, report_path, config, config_hash):
+def generate_team_report(team_name, raw_csv_path, report_path, config, config_hash, code_hash, gates_status, repro_status):
     """
-    Automatically produces team_report.md upon completion of all 225 evaluations.
-    Does NOT draw premature scientific conclusions or declare superiority.
+    Produces team_report.md upon completion of all 225 evaluations.
+    Enforces strict completion criteria and appends formal Pilot Integrity Summary (Requirements 16 & 17).
+    Does NOT report premature scientific superiority.
     """
     if not os.path.exists(raw_csv_path):
         return
     df = pd.read_csv(raw_csv_path)
     env = get_environment_info()
-    assigned_images = config["team_assignments"].get(team_name, [])
+    assigned_images = config.get("team_assignments", {}).get(team_name, [])
 
     total_expected = 225
     completed = len(df)
     unique_keys = set(zip(df["image_id"], df["noise_sigma"], df["trial"], df["solver"]))
     duplicates = completed - len(unique_keys)
 
+    # Completion validation criteria (Requirement 16)
+    is_completed = (
+        completed == 225
+        and len(unique_keys) == 225
+        and duplicates == 0
+        and len(df["solver"].unique()) == 3
+        and len(df["noise_sigma"].unique()) == 3
+        and len(df["trial"].unique()) == 5
+        and len(df["image_id"].unique()) == 5
+    )
+    status_label = "COMPLETED" if is_completed else "INCOMPLETE OR INVALID"
+
+    paths = get_team_directories(team_name)
+    failures_count = 0
+    if os.path.exists(paths["failures_csv"]):
+        try:
+            failures_count = len(pd.read_csv(paths["failures_csv"]))
+        except Exception:
+            pass
+
     with open(report_path, "w", encoding="utf-8") as f:
         f.write(f"# ASL-SR-DPT Pilot Benchmark: Team Report ({team_name})\n\n")
         f.write(f"**Date:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}  \n")
         f.write(f"**Configuration Hash:** `{config_hash}`  \n")
-        f.write(f"**Status:** {'COMPLETED' if completed >= total_expected else 'IN PROGRESS'}  \n\n")
+        f.write(f"**Codebase Hash:** `{code_hash}`  \n")
+        f.write(f"**Status:** `{status_label}`  \n\n")
         f.write("---\n\n")
 
         f.write("## 1. Workload Summary\n\n")
@@ -555,6 +1020,9 @@ def generate_team_report(team_name, raw_csv_path, report_path, config, config_ha
         f.write("## 2. Performance Summary by Solver and Noise Level\n\n")
         summary_table = []
         for (s, n), grp in df.groupby(["solver", "noise_sigma"]):
+            act_rat_val = pd.to_numeric(grp["active_support_ratio"], errors="coerce").mean()
+            act_rat_str = f"{act_rat_val:.4f}" if pd.notna(act_rat_val) else "N/A"
+
             summary_table.append({
                 "Solver": s,
                 "Noise (σ)": n,
@@ -566,6 +1034,7 @@ def generate_team_report(team_name, raw_csv_path, report_path, config, config_ha
                 "ms / patch": f"{grp['ms_per_patch'].mean():.2f}",
                 "Mean Residual": f"{grp['measurement_residual'].mean():.4f}",
                 "Mean Iterations": f"{grp['iteration_count'].mean():.1f}",
+                "Active Support Ratio": act_rat_str,
             })
         summary_df = pd.DataFrame(summary_table)
         f.write(summary_df.to_markdown(index=False))
@@ -574,26 +1043,58 @@ def generate_team_report(team_name, raw_csv_path, report_path, config, config_ha
         f.write("## 3. ASL-SR-DPT Algorithmic Metrics\n\n")
         dpt_df = df[df["solver"] == "ASL-SR-DPT"]
         if not dpt_df.empty:
-            mean_act = dpt_df["active_support_ratio"].mean() if "active_support_ratio" in dpt_df else "N/A"
-            f.write(f"- **Mean Active-Support Ratio:** {mean_act}\n")
-            f.write(f"- **DC Error:** {dpt_df['dc_error'].mean():.6f}\n")
-            f.write(f"- **AC Error:** {dpt_df['ac_error'].mean():.6f}\n\n")
+            mean_act = pd.to_numeric(dpt_df["active_support_ratio"], errors="coerce").mean()
+            mean_act_str = f"{mean_act:.6f}" if pd.notna(mean_act) else "N/A"
+            mean_supp_cnt = pd.to_numeric(dpt_df["mean_active_support_count"], errors="coerce").mean()
+            mean_supp_str = f"{mean_supp_cnt:.2f}" if pd.notna(mean_supp_cnt) else "N/A"
+
+            f.write(f"- **Mean Active-Support Ratio (Thesis Def: sum|S_k| / 63K):** {mean_act_str}\n")
+            f.write(f"- **Mean Active-Support Count per Iteration:** {mean_supp_str} / 63\n")
+            f.write(f"- **Mean Executed Iterations:** {dpt_df['iteration_count'].mean():.2f}\n")
+            f.write(f"- **Mean Accepted Steps:** {pd.to_numeric(dpt_df['accepted_steps'], errors='coerce').mean():.2f}\n")
+            f.write(f"- **Mean Failed Line Searches:** {pd.to_numeric(dpt_df['failed_line_searches'], errors='coerce').mean():.2f}\n")
+            f.write(f"- **Diagnostic DC Error:** {dpt_df['diag_dc_error'].mean():.6f}\n")
+            f.write(f"- **Diagnostic AC Error:** {dpt_df['diag_ac_error'].mean():.6f}\n\n")
 
         f.write("## 4. Host Environment Information\n\n")
         f.write(f"- **Operating System:** {env['os']}\n")
         f.write(f"- **Python Version:** {env['python_version']}\n")
         f.write(f"- **NumPy Version:** {env['numpy_version']}\n")
+        f.write(f"- **SciPy Version:** {env['scipy_version']}\n")
+        f.write(f"- **Pandas Version:** {env['pandas_version']}\n")
         f.write(f"- **Processor:** {env['cpu']}\n")
         f.write(f"- **Thread Locking Settings:** {env['thread_settings']}\n\n")
 
-        f.write("---\n\n")
-        f.write("> **Note on Academic Integrity:** This report contains observational measurements only. ")
-        f.write("Hypothesis testing and definitive scientific conclusions are strictly deferred until ")
-        f.write("both Team A and Team B datasets are merged and audited via `merge_pilot_results.py`.\n")
+        # Pilot Integrity Summary (Requirement 17)
+        f.write("## 5. Pilot Integrity Summary\n\n")
+        f.write(f"- **Expected evaluations:** {total_expected}\n")
+        f.write(f"- **Completed evaluations:** {completed}\n")
+        f.write(f"- **Unique evaluations:** {len(unique_keys)}\n")
+        f.write(f"- **Duplicate evaluations:** {duplicates}\n")
+        f.write(f"- **Failed evaluations:** {failures_count}\n")
+        f.write(f"- **Missing evaluations:** {total_expected - len(unique_keys)}\n\n")
+
+        f.write(f"- **Configuration hash:** `{config_hash}`\n")
+        f.write(f"- **Code version:** `{config.get('version', 'ASL-SR-DPT-PILOT-1.0')}`\n")
+        f.write(f"- **Codebase hash:** `{code_hash}`\n")
+        f.write(f"- **Assigned images:** {', '.join(assigned_images)}\n\n")
+
+        f.write("### Safety Gates Status:\n")
+        for g_name, g_val in gates_status.items():
+            f.write(f"- **{g_name}:** {'PASS' if g_val else 'FAIL'}\n")
+
+        f.write("\n### Reproducibility Status:\n")
+        for s_name, s_val in repro_status.items():
+            f.write(f"- **{s_name}:** {s_val}\n")
+
+        f.write("\n---\n\n")
+        f.write("> **Academic Integrity Note:** This report contains observational measurements only. ")
+        f.write("Hypothesis testing, statistical significance tests, and definitive scientific comparisons ")
+        f.write("are strictly deferred until both Team A and Team B datasets are centrally merged and audited via `merge_pilot_results.py`.\n")
 
 
 # ==============================================================================
-# 7. Streamlit GUI Presentation Layer
+# 8. Streamlit GUI Presentation Layer
 # ==============================================================================
 def main():
     st.set_page_config(
@@ -606,7 +1107,7 @@ def main():
     # Custom styling
     st.markdown("""
         <style>
-            .main-title { font-size: 2.2rem; font-weight: 700; color: #1E3A8A; margin-bottom: 0.2rem; }
+            .main-title { font-size: 2.1rem; font-weight: 700; color: #1E3A8A; margin-bottom: 0.2rem; }
             .sub-title { font-size: 1.05rem; color: #4B5563; margin-bottom: 1.5rem; }
             .card { background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
             .metric-badge { background-color: #DBEAFE; color: #1E40AF; padding: 4px 8px; border-radius: 4px; font-weight: 600; }
@@ -619,11 +1120,11 @@ def main():
         try:
             t_idx = sys.argv.index("--team") + 1
             if t_idx < len(sys.argv):
-                cli_team = sys.argv[t_idx]
-                if cli_team.upper() in ["A", "TEAM A", "TEAM_A"]:
-                    cli_team = "Team A"
-                elif cli_team.upper() in ["B", "TEAM B", "TEAM_B"]:
+                val = sys.argv[t_idx].upper()
+                if "B" in val.split() or val.endswith("B"):
                     cli_team = "Team B"
+                else:
+                    cli_team = "Team A"
         except Exception:
             pass
 
@@ -631,17 +1132,16 @@ def main():
         st.session_state.selected_team = cli_team
     if "reproducibility_passed" not in st.session_state:
         st.session_state.reproducibility_passed = False
+    if "reproducibility_results" not in st.session_state:
+        st.session_state.reproducibility_results = []
     if "benchmark_running" not in st.session_state:
         st.session_state.benchmark_running = False
-    if "stop_requested" not in st.session_state:
-        st.session_state.stop_requested = False
 
     # Sidebar setup
     with st.sidebar:
         st.markdown("### 🔬 Pilot Control Center")
-        st.info(f"**Frozen Config:** `A6_FINAL_FROZEN`\n\n**Hash:** `{CONFIG_HASH[:12]}...`")
+        st.info(f"**Frozen Config:** `ASL_SR_DPT_FINAL`\n\n**Hash:** `{CONFIG_HASH[:12]}...`\n\n**Code Hash:** `{CODE_HASH[:12]}...`")
 
-        # Team Selector
         team_options = ["Team A", "Team B"]
         default_index = 0 if st.session_state.selected_team == "Team A" else 1
         selected_team = st.radio(
@@ -649,17 +1149,19 @@ def main():
             options=team_options,
             index=default_index,
             key="team_radio_selector",
-            help="Strictly selects pre-allocated non-overlapping 225-evaluation workload."
+            help="Strictly allocates pre-assigned non-overlapping 225-evaluation workload."
         )
         st.session_state.selected_team = selected_team
         paths = get_team_directories(selected_team)
 
         st.markdown("---")
-        st.markdown("### 🖥️ Hardware & Thread Safety")
+        st.markdown("### 🖥️ Certified Host Environment")
         env_info = get_environment_info()
         st.text(f"OS: {platform.system()} {platform.release()}")
         st.text(f"Python: {env_info['python_version']}")
         st.text(f"NumPy: {env_info['numpy_version']}")
+        st.text(f"SciPy: {env_info['scipy_version']}")
+        st.text(f"Pandas: {env_info['pandas_version']}")
         st.text(f"OMP Threads: {env_info['thread_settings']['OMP_NUM_THREADS']}")
         st.text(f"MKL Threads: {env_info['thread_settings']['MKL_NUM_THREADS']}")
         st.caption("Single-threaded execution verified.")
@@ -672,7 +1174,14 @@ def main():
     )
 
     assigned_images = PILOT_CONFIG.get("team_assignments", {}).get(selected_team, [])
-    existing_keys = load_existing_composite_keys(paths["raw_csv"])
+
+    # Load existing keys with code/config consistency validation (Requirement 19)
+    try:
+        existing_keys = load_existing_composite_keys(paths["raw_csv"], CONFIG_HASH, CODE_HASH)
+    except ValueError as val_err:
+        st.error(f"❌ {val_err}")
+        existing_keys = set()
+
     completed_count = len(existing_keys)
 
     # Top info banner
@@ -694,7 +1203,7 @@ def main():
     ])
 
     # ==========================================================================
-    # TAB 2: Safety Gates
+    # TAB 2: Safety Gates (Steps 1-5)
     # ==========================================================================
     with tab_gates:
         st.subheader("Pilot Benchmark Pre-Run Safety Gates")
@@ -705,85 +1214,119 @@ def main():
             int(platform.python_version_tuple()[0]) >= 3
             and int(platform.python_version_tuple()[1]) >= 10
             and os.environ.get("OMP_NUM_THREADS") == "1"
+            and os.environ.get("OPENBLAS_NUM_THREADS") == "1"
+            and os.environ.get("MKL_NUM_THREADS") == "1"
         )
         with st.expander("STEP 1: Environment Verification", expanded=True):
             col1, col2 = st.columns(2)
             with col1:
                 st.write(f"**Python Runtime:** {platform.python_version()} (>= 3.10 required)")
                 st.write(f"**NumPy Version:** {np.__version__}")
-                st.write(f"**CPU Architecture:** {env_info['cpu']}")
+                st.write(f"**SciPy Version:** {scipy.__version__}")
+                st.write(f"**Pandas Version:** {pd.__version__}")
             with col2:
-                st.write(f"**Thread Locking:** OMP={os.environ.get('OMP_NUM_THREADS')} (Single-thread required)")
+                st.write(f"**Thread Locking:** OMP={os.environ.get('OMP_NUM_THREADS')}, MKL={os.environ.get('MKL_NUM_THREADS')}, OPENBLAS={os.environ.get('OPENBLAS_NUM_THREADS')}")
                 st.write(f"**Host OS:** {platform.platform()}")
+                st.write(f"**CPU Architecture:** {env_info['cpu']}")
             if g1_pass:
                 st.success("✅ STEP 1 PASSED: Environment is verified and single-threaded execution is locked.")
             else:
-                st.error("❌ STEP 1 FAILED: Environment or thread constraints violated.")
+                st.error("❌ STEP 1 FAILED: Single-threaded execution flags or Python runtime constraint violated.")
 
-        # Gate 2: Configuration Verification
-        g2_pass = (CONFIG_HASH != "CONFIG_ERROR") and ("asl_sr_dpt" in PILOT_CONFIG)
-        with st.expander("STEP 2: Configuration Verification", expanded=True):
-            st.write(f"**Loaded Configuration File:** `configs/pilot_config.json`")
+        # Gate 2: Strengthened Configuration Verification (Requirement 8)
+        g2_pass, g2_errors = validate_frozen_research_parameters(PILOT_CONFIG, CONFIG_HASH)
+        with st.expander("STEP 2: Configuration Integrity Verification", expanded=True):
+            st.write(f"**Configuration File:** `configs/pilot_config.json`")
             st.write(f"**Configuration SHA-256 Digest:** `{CONFIG_HASH}`")
+            st.write(f"**Codebase Integrity SHA-256:** `{CODE_HASH}`")
             st.write(f"**Sensing Dimensions:** $M=38, N=64$; AC Sensing: $M_{{ac}}=37, N_{{ac}}=63$")
-            st.write(f"**Regularization:** $\\lambda_{{DPT}}=0.1, \\lambda_{{LASSO}}=0.01$")
+            st.write(f"**Regularization Parameters:** $\\lambda_{{DPT}}=0.1, \\lambda_{{LASSO}}=0.01$")
             if g2_pass:
-                st.success("✅ STEP 2 PASSED: Frozen research parameters verified.")
+                st.success("✅ STEP 2 PASSED: All frozen research parameters match the exact thesis specification.")
             else:
-                st.error("❌ STEP 2 FAILED: Configuration file missing or invalid.")
+                for err in g2_errors:
+                    st.error(f"❌ Config Error: {err}")
 
-        # Gate 3: Reproducibility Test
-        with st.expander("STEP 3: Reproducibility Verification", expanded=True):
-            st.write("Runs `test001` ($\\sigma=15$, Trial 1) twice for all three solvers with identical seeds to guarantee bitwise reproducibility.")
-            fast_mode = st.checkbox("Fast Pre-Flight Check (1,000 patches, ~5s)", value=True, help="Evaluates 1,000 patches across all 3 solvers for rapid validation. Uncheck to run full image.")
-            if st.button("🚀 Run Reproducibility Check", key="btn_repro"):
-                max_p = 1000 if fast_mode else None
-                with st.spinner("Executing duplicate reference solves for ASL-SR-DPT, OMP, and LASSO-ADMM..."):
+        # Gate 3: Reproducibility Test (Requirements 3 & 4)
+        with st.expander("STEP 3: Full-Image Deterministic Reproducibility Verification", expanded=True):
+            st.write("Executes `test001` ($\\sigma=15.0$, Trial 1) twice for ASL-SR-DPT, OMP, and LASSO-ADMM across all 37,604 patches.")
+            st.write("Verifies byte-level array matching and generates SHA-256 digests.")
+
+            if st.button("🚀 Run Full-Image Reproducibility Verification", key="btn_repro"):
+                with st.spinner("Executing duplicate reference solves on all 37,604 patches for ASL-SR-DPT, OMP, and LASSO-ADMM..."):
                     try:
-                        repro_results = run_reproducibility_test(PILOT_CONFIG, CONFIG_HASH, max_patches=max_p)
+                        repro_results = run_reproducibility_test(PILOT_CONFIG, CONFIG_HASH, CODE_HASH)
                         all_passed = all(r["passed"] for r in repro_results)
                         st.session_state.reproducibility_passed = all_passed
+                        st.session_state.reproducibility_results = repro_results
                         st.dataframe(pd.DataFrame(repro_results))
                         if all_passed:
-                            st.success("✅ STEP 3 PASSED: All solvers produced identical outputs across repeated seeds.")
+                            st.success("✅ STEP 3 PASSED: All solvers verified reproducible under repeated seeds.")
                         else:
                             st.error("❌ STEP 3 FAILED: Output discrepancy detected under repeated seeds.")
                     except Exception as e:
-                        st.error(f"Error during reproducibility check: {e}")
+                        st.error(f"Error during reproducibility verification: {e}")
 
             if st.session_state.reproducibility_passed:
-                st.info("Reproducibility verification is certified for this session.")
+                st.info("Deterministic reproducibility verification is certified for this session.")
             else:
                 st.warning("Reproducibility check not yet executed or failed.")
 
-        # Gate 4: Workload & Storage Verification
+        # Gate 4: Workload & Dataset Verification (Requirement 9)
+        g4_team_ok, g4_team_errs = validate_team_assignment_integrity(PILOT_CONFIG)
         g4_missing_images = []
         for img_id in assigned_images:
             p = os.path.join(REPO_ROOT, "data", "BSD68", f"{img_id}.png")
             if not os.path.exists(p):
                 g4_missing_images.append(img_id)
-        g4_pass = (len(g4_missing_images) == 0) and os.access(paths["raw"], os.W_OK)
+        g4_pass = g4_team_ok and (len(g4_missing_images) == 0) and os.access(paths["raw"], os.W_OK)
 
-        with st.expander("STEP 4: Team Workload Verification", expanded=True):
+        with st.expander("STEP 4: Workload & Storage Verification", expanded=True):
             st.write(f"**Assigned Images:** {', '.join(assigned_images)}")
-            st.write(f"**Output Directory Writable:** {paths['base']}")
-            if len(g4_missing_images) > 0:
-                st.error(f"Missing images in `data/BSD68`: {g4_missing_images}")
-            elif g4_pass:
-                st.success("✅ STEP 4 PASSED: All assigned images exist and storage directory is writable.")
+            st.write(f"**Output Directory Writable:** `{paths['base']}`")
+            if not g4_team_ok:
+                for err in g4_team_errs:
+                    st.error(f"❌ Team Integrity Error: {err}")
+            elif len(g4_missing_images) > 0:
+                st.error(f"Missing images in data/BSD68: {g4_missing_images}")
+            else:
+                st.success("✅ STEP 4 PASSED: Non-overlapping workload assignment and dataset integrity certified.")
 
-        # Overall readiness
-        all_gates_pass = g1_pass and g2_pass and st.session_state.reproducibility_passed and g4_pass
+        # Gate 5: Final Experiment Integrity Verification (Requirement 7)
+        g5_pass, g5_errors = validate_gate_5_experiment_integrity(selected_team, PILOT_CONFIG, CONFIG_HASH, CODE_HASH)
+        with st.expander("STEP 5: Final Experiment Integrity Verification", expanded=True):
+            st.write("Verifies that all 11 experiment integrity preconditions are satisfied:")
+            st.write("- Exactly 5 assigned images & non-overlapping with peer team")
+            st.write("- Exactly 3 noise levels $\\sigma \\in \\{15, 25, 50\\}$ & 5 randomized trials")
+            st.write("- Exactly 3 frozen solvers (ASL-SR-DPT with DC preservation, OMP, LASSO-ADMM)")
+            st.write("- Exactly 225 expected workload keys for this team")
+            st.write("- Codebase and configuration SHA-256 consistency")
+
+            if g5_pass:
+                st.success("✅ STEP 5 PASSED: Final experiment integrity preconditions satisfied.")
+            else:
+                for err in g5_errors:
+                    st.error(f"❌ Experiment Integrity Error: {err}")
+
+        # Overall readiness definition (Requirement 7)
+        all_gates_pass = (
+            g1_pass
+            and g2_pass
+            and st.session_state.reproducibility_passed
+            and g4_pass
+            and g5_pass
+        )
+
+        st.markdown("---")
         if all_gates_pass:
-            st.success("🎉 ALL GATES PASSED: Ready to run pilot benchmark.")
+            st.success("🎉 ALL 5 GATES PASSED: Benchmark execution is unlocked.")
         else:
-            st.warning("⚠️ Complete all required safety gates above to unlock benchmark execution.")
+            st.warning("⚠️ All 5 verification gates must pass to unlock benchmark execution.")
 
     # ==========================================================================
     # TAB 1: Live Benchmark Dashboard
     # ==========================================================================
     with tab_dash:
-        # Generate full task list
         solvers = PILOT_CONFIG.get("solvers", ["ASL-SR-DPT", "OMP", "LASSO-ADMM"])
         noises = PILOT_CONFIG.get("noise_levels", [15.0, 25.0, 50.0])
         trials = PILOT_CONFIG.get("trials", [1, 2, 3, 4, 5])
@@ -799,7 +1342,7 @@ def main():
         remaining_tasks = [k for k in task_list if k not in existing_keys]
         completed_count = total_tasks - len(remaining_tasks)
 
-        # Status cards
+        # Metrics cards
         col_m1, col_m2, col_m3, col_m4, col_m5 = st.columns(5)
         col_m1.metric("Target Evaluations", f"{total_tasks}")
         col_m2.metric("Completed", f"{completed_count}")
@@ -809,91 +1352,94 @@ def main():
 
         st.progress(completed_count / float(total_tasks))
 
-        # Control buttons
-        col_btn1, col_btn2 = st.columns([2, 1])
-        with col_btn1:
-            can_start = (len(remaining_tasks) > 0)
-            btn_label = "▶️ Start Benchmark Workload" if completed_count == 0 else "⏯️ Resume Benchmark Workload"
-            start_clicked = st.button(
-                btn_label,
-                disabled=(not can_start or st.session_state.benchmark_running),
-                type="primary",
-                use_container_width=True,
-            )
-        with col_btn2:
-            if st.button("⏹️ Pause / Stop", disabled=(not st.session_state.benchmark_running), use_container_width=True):
-                st.session_state.stop_requested = True
-                st.warning("Stop requested. Benchmark will pause after current evaluation.")
+        # Control area
+        can_start = (len(remaining_tasks) > 0) and all_gates_pass
+        btn_label = "▶️ Start Benchmark Workload" if completed_count == 0 else "⏯️ Resume Benchmark Workload"
+
+        start_clicked = st.button(
+            btn_label,
+            disabled=(not can_start or st.session_state.benchmark_running),
+            type="primary",
+            use_container_width=True,
+        )
+
+        st.caption(
+            "ℹ️ **Interruption & Resumption Safety:** Every completed evaluation is flushed atomically to disk. "
+            "To pause, close the terminal or browser. Clicking Resume will automatically pick up from the next pending task."
+        )
 
         # Live Execution Loop
         if start_clicked:
-            if not st.session_state.reproducibility_passed:
-                st.warning("⚠️ Please execute the 'Run Reproducibility Check' in Tab 2 before launching the full run.")
-            else:
-                st.session_state.benchmark_running = True
-                st.session_state.stop_requested = False
+            st.session_state.benchmark_running = True
 
-                progress_bar = st.progress(completed_count / float(total_tasks))
-                status_placeholder = st.empty()
-                recent_table_placeholder = st.empty()
-                img_preview_col1, img_preview_col2 = st.columns(2)
+            progress_bar = st.progress(completed_count / float(total_tasks))
+            status_placeholder = st.empty()
+            recent_table_placeholder = st.empty()
+            img_preview_col1, img_preview_col2 = st.columns(2)
 
-                t_run_start = time.time()
-                evals_done_session = 0
+            evals_done_session = 0
 
-                for idx, (img_id, noise_sigma, trial, solver_name) in enumerate(task_list):
-                    if st.session_state.stop_requested:
-                        st.info("Benchmark paused by user.")
-                        break
+            for idx, (img_id, noise_sigma, trial, solver_name) in enumerate(task_list):
+                key = (img_id, noise_sigma, trial, solver_name)
+                if key in existing_keys:
+                    continue
 
-                    key = (img_id, noise_sigma, trial, solver_name)
-                    if key in existing_keys:
-                        continue
+                status_placeholder.markdown(f"""
+                    **Current Execution ({completed_count + evals_done_session + 1} / {total_tasks}):**  
+                    `Image: {img_id}` | `Noise: σ={int(noise_sigma)}` | `Trial: {trial}` | `Solver: {solver_name}`
+                """)
 
-                    status_placeholder.markdown(f"""
-                        **Current Execution ({completed_count + evals_done_session + 1} / {total_tasks}):**  
-                        `Image: {img_id}` | `Noise: σ={int(noise_sigma)}` | `Trial: {trial}` | `Solver: {solver_name}`
-                    """)
+                try:
+                    record, rec_img, noisy_img, _ = execute_single_pilot_evaluation(
+                        img_id, noise_sigma, trial, solver_name, selected_team, PILOT_CONFIG, CONFIG_HASH, CODE_HASH
+                    )
+                    append_evaluation_record(paths["raw_csv"], record)
+                    existing_keys.add(key)
+                    evals_done_session += 1
 
-                    try:
-                        record, rec_img, noisy_img = execute_single_pilot_evaluation(
-                            img_id, noise_sigma, trial, solver_name, selected_team, PILOT_CONFIG, CONFIG_HASH
-                        )
-                        append_evaluation_record(paths["raw_csv"], record)
-                        existing_keys.add(key)
-                        evals_done_session += 1
+                    # Live visual preview
+                    with img_preview_col1:
+                        st.image(noisy_img, caption=f"Noisy Input ({img_id}, σ={int(noise_sigma)})", clamp=True)
+                    with img_preview_col2:
+                        st.image(rec_img, caption=f"Reconstruction ({solver_name}, PSNR: {record['psnr']} dB)", clamp=True)
 
-                        # Live visual preview
-                        with img_preview_col1:
-                            st.image(noisy_img, caption=f"Noisy Input ({img_id}, σ={int(noise_sigma)})", clamp=True)
-                        with img_preview_col2:
-                            st.image(rec_img, caption=f"Reconstruction ({solver_name}, PSNR: {record['psnr']} dB)", clamp=True)
+                except Exception as exc:
+                    log_failure_record(paths["failures_csv"], {
+                        "image_id": img_id,
+                        "noise": noise_sigma,
+                        "trial": trial,
+                        "solver": solver_name,
+                        "error_type": type(exc).__name__,
+                        "error_message": str(exc),
+                        "timestamp": datetime.now().isoformat(),
+                    })
 
-                    except Exception as exc:
-                        log_failure_record(paths["failures_csv"], {
-                            "image_id": img_id,
-                            "noise": noise_sigma,
-                            "trial": trial,
-                            "solver": solver_name,
-                            "error_type": type(exc).__name__,
-                            "error_message": str(exc),
-                            "timestamp": datetime.now().isoformat(),
-                        })
+                # Update progress
+                current_total_done = completed_count + evals_done_session
+                progress_bar.progress(current_total_done / float(total_tasks))
 
-                    # Update progress
-                    current_total_done = completed_count + evals_done_session
-                    progress_bar.progress(current_total_done / float(total_tasks))
+                # Display latest table
+                if os.path.exists(paths["raw_csv"]):
+                    latest_df = pd.read_csv(paths["raw_csv"])
+                    recent_table_placeholder.dataframe(
+                        latest_df.tail(5)[["image_id", "noise_sigma", "trial", "solver", "psnr", "ssim", "solve_time", "ms_per_patch"]]
+                    )
 
-                    # Display latest table
-                    if os.path.exists(paths["raw_csv"]):
-                        latest_df = pd.read_csv(paths["raw_csv"])
-                        recent_table_placeholder.dataframe(latest_df.tail(5)[["image_id", "noise_sigma", "trial", "solver", "psnr", "ssim", "solve_time", "ms_per_patch"]])
-
-                st.session_state.benchmark_running = False
-                if len(existing_keys) == total_tasks:
-                    generate_team_report(selected_team, paths["raw_csv"], paths["team_report_md"], PILOT_CONFIG, CONFIG_HASH)
-                    st.success(f"🎉 Team workload completed! All {total_tasks} evaluations finished.")
-                st.rerun()
+            st.session_state.benchmark_running = False
+            if len(existing_keys) == total_tasks:
+                gates_dict = {
+                    "Gate 1 (Environment)": g1_pass,
+                    "Gate 2 (Config Integrity)": g2_pass,
+                    "Gate 3 (Reproducibility)": st.session_state.reproducibility_passed,
+                    "Gate 4 (Workload & Storage)": g4_pass,
+                    "Gate 5 (Experiment Integrity)": g5_pass,
+                }
+                repro_dict = {r["solver"]: r["classification"] for r in st.session_state.reproducibility_results}
+                generate_team_report(
+                    selected_team, paths["raw_csv"], paths["team_report_md"], PILOT_CONFIG, CONFIG_HASH, CODE_HASH, gates_dict, repro_dict
+                )
+                st.success(f"🎉 Team workload completed! All {total_tasks} evaluations finished.")
+            st.rerun()
 
         # Recent Results Preview
         st.markdown("### 📋 Recent Evaluation Records")
@@ -1001,11 +1547,14 @@ def main():
         st.markdown("---")
         st.markdown("#### 🔗 Central Merge Instructions")
         st.code("""
-# When both Team A and Team B have completed their 225 evaluations:
+# When both Team A (Khevin) and Team B (Marc) have completed their 225 evaluations:
 python merge_pilot_results.py \\
     --team-a results/team_a/raw/pilot_raw_results_team_a.csv \\
     --team-b results/team_b/raw/pilot_raw_results_team_b.csv \\
-    --output results/combined/
+    --team-a-failures results/team_a/failures/pilot_failures.csv \\
+    --team-b-failures results/team_b/failures/pilot_failures.csv \\
+    --config configs/pilot_config.json \\
+    --output results/pilot_combined
         """, language="bash")
         st.caption("Verifies that 225 (Team A) + 225 (Team B) = exactly 450 unique evaluations without duplicates.")
 

@@ -27,6 +27,13 @@ from app import (
     load_existing_composite_keys,
     append_evaluation_record,
     log_failure_record,
+    validate_frozen_research_parameters,
+    validate_team_assignment_integrity,
+    validate_gate_5_experiment_integrity,
+    validate_evaluation_record,
+    validate_dpt_batch_diagnostics,
+    compute_codebase_integrity_hash,
+    get_environment_info,
     CONFIG_PATH,
 )
 from merge_pilot_results import (
@@ -75,14 +82,14 @@ def test_workload_disjoint_and_counts():
 def test_seed_determinism():
     """Verify deterministic seed generation matches mathematical specification."""
     base_seed = 20260908
-    # Test case 1
+    # Test case 1: test001, sigma=15.0, trial=1
     s_seed1, n_seed1 = compute_deterministic_seeds("test001", 15.0, 1, base_seed)
-    assert s_seed1 == base_seed + 1
+    assert s_seed1 == base_seed + 1000000 + 15000 + 1
     assert n_seed1 == base_seed + 100000 + 15000 + 1
 
-    # Test case 2
+    # Test case 2: test005, sigma=50.0, trial=5
     s_seed2, n_seed2 = compute_deterministic_seeds("test005", 50.0, 5, base_seed)
-    assert s_seed2 == base_seed + 5
+    assert s_seed2 == base_seed + 5000000 + 50000 + 5
     assert n_seed2 == base_seed + 500000 + 50000 + 5
 
     # Repeat call returns identical values
@@ -122,6 +129,7 @@ def test_merge_utility_with_mock_datasets(tmp_path):
     def make_mock_df(keys, team_name):
         rows = []
         for img, n, t, s in keys:
+            clean_id = int(str(img).replace("test", "").lstrip("0") or "0")
             rows.append({
                 "run_id": f"{img}_s{int(n)}_t{t}_{s}",
                 "image_id": img,
@@ -130,8 +138,8 @@ def test_merge_utility_with_mock_datasets(tmp_path):
                 "trial": t,
                 "solver": s,
                 "team": team_name,
-                "sensing_seed": 20260908 + t,
-                "noise_seed": 20260908 + t * 100000 + int(n) * 1000 + int(img.replace("test", "")),
+                "sensing_seed": 20260908 + clean_id * 1000000 + int(n) * 1000 + t,
+                "noise_seed": 20260908 + t * 100000 + int(n) * 1000 + clean_id,
                 "psnr": 24.5,
                 "ssim": 0.62,
                 "mse": 0.004,
@@ -144,7 +152,7 @@ def test_merge_utility_with_mock_datasets(tmp_path):
                 "relative_residual": 0.1,
                 "normalized_residual": 0.08,
                 "config_hash": cfg_hash,
-                "code_version": "v7.0.0-pilot",
+                "code_version": "ASL-SR-DPT-PILOT-1.0",
                 "timestamp": "2026-09-16T12:00:00",
             })
         return pd.DataFrame(rows)
@@ -178,3 +186,200 @@ def test_merge_utility_with_mock_datasets(tmp_path):
         assert "Expected:\n450 evaluations" in content
         assert "Received:\n450" in content
         assert "Overall pilot integrity:\nPASS" in content
+
+
+def test_environment_info_metadata():
+    """Verify environment info captures scipy explicitly and contains no v7/a6 pilot references."""
+    env = get_environment_info()
+    assert "scipy_version" in env
+    assert env["scipy_version"] != env["pandas_version"]
+    assert env["app_version"] == "ASL-SR-DPT-PILOT-1.0"
+    assert "code_hash" in env
+    assert len(env["code_hash"]) == 64
+
+
+def test_gate_2_and_gate_5_validations():
+    """Verify Gate 2 (Configuration) and Gate 5 (Experiment Integrity) pass on frozen config."""
+    config, cfg_hash = load_pilot_config(CONFIG_PATH)
+    code_hash, _ = compute_codebase_integrity_hash()
+
+    # Gate 2
+    g2_ok, g2_errs = validate_frozen_research_parameters(config, cfg_hash)
+    assert g2_ok is True, f"Gate 2 failed: {g2_errs}"
+
+    # Team assignment integrity
+    team_ok, team_errs = validate_team_assignment_integrity(config)
+    assert team_ok is True, f"Team integrity failed: {team_errs}"
+
+    # Gate 5 for Team A and Team B
+    g5_a_ok, g5_a_errs = validate_gate_5_experiment_integrity("Team A", config, cfg_hash, code_hash)
+    assert g5_a_ok is True, f"Gate 5 Team A failed: {g5_a_errs}"
+
+    g5_b_ok, g5_b_errs = validate_gate_5_experiment_integrity("Team B", config, cfg_hash, code_hash)
+    assert g5_b_ok is True, f"Gate 5 Team B failed: {g5_b_errs}"
+
+
+def test_record_validation_invariants():
+    """Verify validate_evaluation_record catches invalid metrics, corrupted keys, or schema violations."""
+    config, cfg_hash = load_pilot_config(CONFIG_PATH)
+    valid_record = {
+        "psnr": 24.0,
+        "ssim": 0.6,
+        "mse": 0.004,
+        "setup_time": 0.01,
+        "solve_time": 1.5,
+        "ms_per_patch": 1.2,
+        "measurement_residual": 0.7,
+        "solver": "ASL-SR-DPT",
+        "noise_sigma": 15.0,
+        "trial": 1,
+        "image_id": "test001",
+        "config_hash": cfg_hash,
+        "sensing_m": 37,
+        "sensing_n": 63,
+        "sensing_architecture": "dc_preserving",
+        "active_support_ratio": 0.85,
+        "mean_active_support_count": 53.55,
+        "final_sigma": 0.01,
+        "accepted_steps": 12.0,
+        "failed_line_searches": 0.0,
+    }
+    assigned = ["test001", "test002", "test003", "test004", "test005"]
+    solvers = ["ASL-SR-DPT", "OMP", "LASSO-ADMM"]
+    noises = [15.0, 25.0, 50.0]
+    trials = [1, 2, 3, 4, 5]
+
+    ok, msg = validate_evaluation_record(valid_record, assigned, solvers, noises, trials, cfg_hash)
+    assert ok is True, f"Valid record failed: {msg}"
+
+    # Bad solver
+    bad_rec = dict(valid_record, solver="V7_OPT_BASE")
+    ok, msg = validate_evaluation_record(bad_rec, assigned, solvers, noises, trials, cfg_hash)
+    assert ok is False
+
+    # Negative solve time
+    bad_time = dict(valid_record, solve_time=-0.1)
+    ok, msg = validate_evaluation_record(bad_time, assigned, solvers, noises, trials, cfg_hash)
+    assert ok is False
+
+    # NaN metric
+    bad_nan = dict(valid_record, psnr=float("nan"))
+    ok, msg = validate_evaluation_record(bad_nan, assigned, solvers, noises, trials, cfg_hash)
+    assert ok is False
+
+    # DPT invalid sensing dimensions
+    bad_dim = dict(valid_record, sensing_m=38)
+    ok, msg = validate_evaluation_record(bad_dim, assigned, solvers, noises, trials, cfg_hash)
+    assert ok is False
+    assert "sensing dimensions invalid" in msg
+
+    # DPT invalid active support ratio out of [0, 1]
+    bad_ratio = dict(valid_record, active_support_ratio=1.2)
+    ok, msg = validate_evaluation_record(bad_ratio, assigned, solvers, noises, trials, cfg_hash)
+    assert ok is False
+    assert "active_support_ratio out of range" in msg
+
+    # OMP with non-empty active support ratio (must be blank)
+    omp_record = {
+        "psnr": 23.5,
+        "ssim": 0.58,
+        "mse": 0.005,
+        "setup_time": 0.01,
+        "solve_time": 2.0,
+        "ms_per_patch": 1.5,
+        "measurement_residual": 0.8,
+        "solver": "OMP",
+        "noise_sigma": 15.0,
+        "trial": 1,
+        "image_id": "test001",
+        "config_hash": cfg_hash,
+        "sensing_m": 38,
+        "sensing_n": 64,
+        "sensing_architecture": "standard",
+        "active_support_ratio": "",
+        "mean_active_support_count": "",
+        "final_sigma": "",
+        "accepted_steps": "",
+        "failed_line_searches": "",
+    }
+    ok, msg = validate_evaluation_record(omp_record, assigned, solvers, noises, trials, cfg_hash)
+    assert ok is True
+
+    bad_omp = dict(omp_record, active_support_ratio=0.5)
+    ok, msg = validate_evaluation_record(bad_omp, assigned, solvers, noises, trials, cfg_hash)
+    assert ok is False
+    assert "must be blank/empty" in msg
+
+
+def test_asl_sr_dpt_solver_real_diagnostics():
+    """Verify HybridSparseSolverV7Optimized denoise_batch returns real diagnostics matching thesis definition."""
+    from hybrid_sparse_solver_v7_optimized import HybridSparseSolverV7Optimized
+    A = np.random.randn(37, 63)
+    solver = HybridSparseSolverV7Optimized(A=A, lambda_reg=0.1, tol=1e-5)
+    Y = np.random.randn(37, 4)
+
+    Z, diag = solver.denoise_batch(Y, max_iter=20, return_diagnostics=True)
+    assert Z.shape == (63, 4)
+    assert "iterations" in diag
+    assert diag["iterations"] > 0
+    assert "active_support_counts" in diag
+    assert "active_support_ratio" in diag
+    # Active support ratio must be strictly in (0, 1]
+    assert 0.0 < diag["active_support_ratio"] <= 1.0
+    assert diag["accepted_steps"] >= 0
+    assert diag["failed_line_searches"] >= 0
+
+
+def test_dpt_batch_diagnostic_validation():
+    """Verify validate_dpt_batch_diagnostics strictly enforces schema invariants per batch and per patch."""
+    valid_diag = {
+        "patch_iterations": [10, 15],
+        "patch_active_counts": [[20] * 10, [25] * 15],
+        "patch_accepted_steps": [10, 14],
+        "patch_failed_line_searches": [0, 1],
+        "patch_final_sigma": [0.01, 0.01],
+    }
+    ok, msg = validate_dpt_batch_diagnostics(valid_diag, expected_batch_size=2)
+    assert ok is True
+
+    # Length mismatch
+    ok, msg = validate_dpt_batch_diagnostics(valid_diag, expected_batch_size=3)
+    assert ok is False
+    assert "length mismatch" in msg
+
+    # Active support size out of bounds (> 63)
+    bad_supp = {
+        "patch_iterations": [2],
+        "patch_active_counts": [[10, 64]],
+        "patch_accepted_steps": [2],
+        "patch_failed_line_searches": [0],
+        "patch_final_sigma": [0.01],
+    }
+    ok, msg = validate_dpt_batch_diagnostics(bad_supp, expected_batch_size=1)
+    assert ok is False
+    assert "out of bounds [0, 63]" in msg
+
+    # Negative iterations
+    bad_iter = {
+        "patch_iterations": [0],
+        "patch_active_counts": [[]],
+        "patch_accepted_steps": [0],
+        "patch_failed_line_searches": [0],
+        "patch_final_sigma": [0.01],
+    }
+    ok, msg = validate_dpt_batch_diagnostics(bad_iter, expected_batch_size=1)
+    assert ok is False
+    assert "iteration count must be > 0" in msg
+
+
+def test_code_integrity_hash_includes_app_and_requirements():
+    """Verify CODE_HASH covers app.py and requirements.txt."""
+    code_hash, file_hashes = compute_codebase_integrity_hash()
+    assert "app.py" in file_hashes
+    assert len(file_hashes["app.py"]) == 64
+    assert file_hashes["app.py"] != "missing"
+    if os.path.exists(os.path.join(REPO_ROOT, "requirements.txt")):
+        assert "requirements.txt" in file_hashes
+        assert len(file_hashes["requirements.txt"]) == 64
+
+

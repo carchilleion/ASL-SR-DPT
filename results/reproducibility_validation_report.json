@@ -1,0 +1,57 @@
+{
+  "timestamp": "2026-09-16T22:09:19Z",
+  "config_hash": "5b7afb33830f7ce025bed2b5639f6b6eef01d7b2844fba1f3fe12cf8b962a27b",
+  "code_hash": "6e37f188fa020d34da13cfc2b70ae7f9a869660760a7eb020e8cb591cf79ba43",
+  "elapsed_seconds": 545.0066204071045,
+  "overall_passed": true,
+  "results": [
+    {
+      "solver": "ASL-SR-DPT",
+      "classification": "EXACT_REPRODUCTION",
+      "passed": true,
+      "bytes_match": true,
+      "image_sha256": "0c3c7cac33c1f0308d234a74ae0813e012485f1f885f25f83550da9d9d9cec69",
+      "coeff_sha256": "131311e0b2e1a123597955f9dde7b290e03d32c88b974bee91567e2a087c6df6",
+      "max_image_diff": 0.0,
+      "max_coeff_diff": 0.0,
+      "psnr_run1": 21.2567,
+      "psnr_run2": 21.2567,
+      "psnr_diff": 0.0,
+      "ssim_diff": 0.0,
+      "mse_diff": 0.0,
+      "res_diff": 0.0
+    },
+    {
+      "solver": "OMP",
+      "classification": "EXACT_REPRODUCTION",
+      "passed": true,
+      "bytes_match": true,
+      "image_sha256": "ed0225f49d59e225aa8457b3486b2f7fa81283e8708530a6c0c939abd721312e",
+      "coeff_sha256": "a6964566eb2bc4d03dfec5b43f4bbe45b1bebcf219874f1c1b5da200ce4fd161",
+      "max_image_diff": 0.0,
+      "max_coeff_diff": 0.0,
+      "psnr_run1": 24.4254,
+      "psnr_run2": 24.4254,
+      "psnr_diff": 0.0,
+      "ssim_diff": 0.0,
+      "mse_diff": 0.0,
+      "res_diff": 0.0
+    },
+    {
+      "solver": "LASSO-ADMM",
+      "classification": "EXACT_REPRODUCTION",
+      "passed": true,
+      "bytes_match": true,
+      "image_sha256": "a56c66e6e81f38587f3a72d805ba08a2130a26f96001bda6775ec1ed80fd4abc",
+      "coeff_sha256": "f3ec39118969688a56e1ce11214b04026cfa7333d39126688668d14eb4074d0c",
+      "max_image_diff": 0.0,
+      "max_coeff_diff": 0.0,
+      "psnr_run1": 21.516,
+      "psnr_run2": 21.516,
+      "psnr_diff": 0.0,
+      "ssim_diff": 0.0,
+      "mse_diff": 0.0,
+      "res_diff": 0.0
+    }
+  ]
+}

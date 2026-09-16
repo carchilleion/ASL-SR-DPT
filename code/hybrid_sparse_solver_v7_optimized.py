@@ -339,11 +339,12 @@ class HybridSparseSolverV7Optimized:
         support_threshold_multiplier=1e-5,
         support_reopen_interval=3,
         use_midpoint=True,
+        return_diagnostics=False,
     ):
         """
         Denoise B patches simultaneously using vectorized Level-3 BLAS matrix operations.
         Y: np.ndarray of shape (M, B)
-        Returns: Z of shape (N, B)
+        Returns: Z of shape (N, B), or (Z, diagnostics) if return_diagnostics is True.
         """
         Y = np.asarray(Y, dtype=float)
         M, B = Y.shape
@@ -366,6 +367,13 @@ class HybridSparseSolverV7Optimized:
 
         converged = np.zeros(B, dtype=bool)
 
+        if return_diagnostics:
+            patch_iterations = np.zeros(B, dtype=int)
+            patch_active_counts = [[] for _ in range(B)]
+            patch_accepted_steps = np.zeros(B, dtype=int)
+            patch_failed_ls = np.zeros(B, dtype=int)
+            patch_final_sigma = np.full(B, sigma_min, dtype=float)
+
         for iteration in range(max_iter):
             if np.all(converged):
                 break
@@ -381,6 +389,13 @@ class HybridSparseSolverV7Optimized:
                 if not np.all(any_act):
                     active_mask[:, ~any_act] = True
                 all_active = bool(active_mask.all())
+
+            if return_diagnostics:
+                for b in range(B):
+                    if not converged[b]:
+                        patch_iterations[b] += 1
+                        act_c = self.N if all_active else int(np.count_nonzero(active_mask[:, b]))
+                        patch_active_counts[b].append(act_c)
 
             # 2. Shared evaluation: W = exp(Z^2 * neg_inv_2sigma2)
             neg_inv_2sigma2 = -0.5 / (sigma * sigma)  # (B,)
@@ -446,6 +461,11 @@ class HybridSparseSolverV7Optimized:
             accepted_R = R_cand.copy()
             accepted_fid = fid_cand.copy()
             accepted_mu = mu.copy()
+
+            if return_diagnostics:
+                for b in np.where(primary_accepted)[0]:
+                    if not converged[b]:
+                        patch_accepted_steps[b] += 1
 
             # Fallback for individual patches requiring backtracking
             if not np.all(primary_accepted):
@@ -519,6 +539,12 @@ class HybridSparseSolverV7Optimized:
 
                             step_b *= beta_decay
 
+                    if return_diagnostics and not converged[b]:
+                        if succ_b:
+                            patch_accepted_steps[b] += 1
+                        else:
+                            patch_failed_ls[b] += 1
+
                     if not succ_b:
                         mu[b] *= 0.5
                         continue
@@ -537,9 +563,44 @@ class HybridSparseSolverV7Optimized:
 
             # Convergence condition per patch
             newly_converged = (rel_change < self.tol) & (sigma <= sigma_min)
+            if return_diagnostics:
+                for b in np.where(newly_converged & (~converged))[0]:
+                    patch_final_sigma[b] = float(sigma[b])
             converged |= newly_converged
 
             sigma = np.maximum(sigma * decrease_factor, sigma_min)
+
+        if return_diagnostics:
+            for b in range(B):
+                if not converged[b]:
+                    patch_final_sigma[b] = float(sigma[b])
+
+            total_active_counts_sum = sum(sum(counts) for counts in patch_active_counts)
+            total_iterations_sum = int(np.sum(patch_iterations))
+
+            batch_active_ratio = (
+                (float(total_active_counts_sum) / (float(self.N) * float(total_iterations_sum)))
+                if total_iterations_sum > 0 else 1.0
+            )
+            all_counts_flat = [c for counts in patch_active_counts for c in counts]
+            mean_active_count = float(np.mean(all_counts_flat)) if all_counts_flat else float(self.N)
+
+            diagnostics = {
+                "iterations": float(np.mean(patch_iterations)),
+                "total_iterations": total_iterations_sum,
+                "active_support_counts": all_counts_flat,
+                "mean_active_support_count": mean_active_count,
+                "active_support_ratio": float(batch_active_ratio),
+                "final_sigma": float(np.mean(patch_final_sigma)),
+                "accepted_steps": float(np.mean(patch_accepted_steps)),
+                "failed_line_searches": float(np.mean(patch_failed_ls)),
+                "patch_iterations": patch_iterations.tolist(),
+                "patch_active_counts": patch_active_counts,
+                "patch_accepted_steps": patch_accepted_steps.tolist(),
+                "patch_failed_line_searches": patch_failed_ls.tolist(),
+                "patch_final_sigma": patch_final_sigma.tolist(),
+            }
+            return Z, diagnostics
 
         return Z
 

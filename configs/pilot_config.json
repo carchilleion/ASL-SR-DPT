@@ -1,6 +1,6 @@
 {
-  "config_name": "ASL-SR-DPT-PILOT-BENCHMARK-FROZEN",
-  "version": "v7.0.0-pilot",
+  "config_name": "ASL_SR_DPT_FINAL",
+  "version": "ASL-SR-DPT-PILOT-1.0",
   "date_frozen": "2026-09-16",
   "patch_size": 8,
   "stride": 2,
@@ -48,7 +48,7 @@
   },
   "seed_protocol": {
     "base_seed": 20260908,
-    "sensing_seed_formula": "base_seed + trial",
+    "sensing_seed_formula": "base_seed + clean_id * 1000000 + int(noise_sigma) * 1000 + int(trial)",
     "noise_seed_formula": "base_seed + trial * 100000 + int(noise_sigma) * 1000 + int(image_id.replace('test', ''))"
   },
   "dataset_dir": "data/BSD68",
