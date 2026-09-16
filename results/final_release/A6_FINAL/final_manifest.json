@@ -1,0 +1,34 @@
+{
+  "algorithm_name": "ASL-SR-DPT-A6-DC-PRESERVATION",
+  "algorithm_version": "v7.0.0-final",
+  "label": "A6_FINAL_FROZEN",
+  "date": "2026-09-08",
+  "code_hashes": {
+    "hybrid_sparse_solver_v7_optimized.py": "e2c74fa3f89555f08f392eec5db36d3bd62656ad9b3f6aea52394fa9f7cb5d2e",
+    "hybrid_sparse_solver_v7_fixed.py": "c6ccd84eeb8f00f389bc7c6234e354df4fac735739a5cabfcc00530357d7eeb1",
+    "sensing.py": "b145f8a644d385cc23e28450ea743473a2af81e3b465c999c753c7f4ac948a54",
+    "reconstruction.py": "87f706f6486c6bf0f91ab3dc9fd7c744f977ca7baab72ddb0aa09e4a2cbc5a12",
+    "metrics.py": "eaf8806c3c6ba80122f74b08ca51dc270195e867ced4dd96f40650320baa7324",
+    "benchmark_runner.py": "d8f9bbe68b2af6155f10e95da47294f65cb5c80c98dadfb5cfeb1ed3f1099d0c",
+    "final_config.json": "d3619add2942fe04ea5eefccfd7c5570b2eae6a9156eec823acf0522b3c4346f",
+    "requirements.txt": "bb622e57b5187a07b74ede2e6bbe611ee3ced65be97211d2a7970336638a821e"
+  },
+  "config_hash": "d3619add2942fe04ea5eefccfd7c5570b2eae6a9156eec823acf0522b3c4346f",
+  "python_version": "3.12.9",
+  "numpy_version": "2.4.3",
+  "scipy_version": "1.15.3",
+  "pillow_version": "12.1.1",
+  "os": "Windows-11-10.0.26200-SP0",
+  "cpu": "Intel64 Family 6 Model 183 Stepping 1, GenuineIntel",
+  "cpu_count": 16,
+  "ram_gb": 15.71,
+  "thread_settings": {
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "MKL_NUM_THREADS": "1",
+    "NUMEXPR_NUM_THREADS": "1"
+  },
+  "dataset_identifier": "BSD68",
+  "dataset_count": 68,
+  "notes": "Permanent frozen copy of ASL-SR-DPT A6 final candidate and baselines for thesis final release."
+}

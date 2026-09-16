@@ -1,0 +1,3 @@
+trial,image_id,noise_sigma,sensing_mode,solver,psnr,ssim,mse,solve_time,setup_time,iterations,mean_iterations_per_patch,mean_active_support_count,final_sigma,residual,active_support_ratio,failed_line_searches,accepted_steps,seed,code_version,patch_count,run_id,experiment
+1,test001,15.0,standard,ASL-SR-DPT-MidpointON,20.5776,0.4229,0.008755,252.2218,0.000387,133.34,133.34,63.99,0.01,0.6242,0.9998,0,5014146,20270908,v7.0.0-fixed,37604,E4_1_test001_15.0_ASL-SR-DPT-MidpointON_7029e5,E4
+1,test001,15.0,standard,ASL-SR-DPT-MidpointOFF,20.5776,0.4229,0.008755,233.5445,0.000387,133.34,133.34,63.99,0.01,0.6242,0.9998,0,5014146,20270908,v7.0.0-fixed,37604,E4_1_test001_15.0_ASL-SR-DPT-MidpointOFF_d1791e,E4

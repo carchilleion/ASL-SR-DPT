@@ -1,0 +1,2 @@
+Version: V7_OPT_05
+Change Description: Candidate K: Vectorized Exponential Evaluation & Direct C-Method Sum

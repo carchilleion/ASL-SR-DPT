@@ -1,0 +1,9 @@
+metric,V7_BASELINE,V7_OPTIMIZED,difference,percent_change
+total_solve_time_sec,176.643,68.682,-107.961,-61.12%
+mean_time_per_patch_ms,4.697,1.826,-2.871,-61.12%
+speedup,1.000x,2.572x,+1.572x,—
+PSNR,21.3910,21.3444,-0.0466,0.00%
+SSIM,0.4282,0.4252,-0.0030,0.00%
+MSE,0.007260,0.007338,7.78e-05,0.00%
+mean_iterations,99.02,150.00,50.98,0.00%
+mean_residual,0.6244,0.6277,0.0033,0.00%

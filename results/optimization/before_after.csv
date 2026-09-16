@@ -1,0 +1,11 @@
+metric,V7_BASELINE,V7_OPTIMIZED,delta,percent_change
+total_runtime_seconds,3.9971,2.0594,-1.9377,-48.48%
+mean_ms_per_patch,7.994,4.119,-3.875,-48.48%
+speedup_factor,1.000x,1.941x,+0.941x,—
+objective_evaluations,153740,153740,0,0.00%
+gradient_evaluations,75000,75000,0,0.00%
+mean_iterations,150.00,150.00,0.00,0.00%
+mean_residual,0.725298,0.725298,-4.55e-15,0.00%
+mean_active_ratio,0.9998,0.9998,0.00e+00,0.00%
+optimized_matrix_vector_ops,—,151376,—,—
+optimized_exp_evaluations,—,9838419,—,—

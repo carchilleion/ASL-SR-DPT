@@ -1,0 +1,5 @@
+configuration,sensing_type,solve_time_sec,ms_per_patch,psnr,ssim,mse,residual
+V7_OPT_BASE (Standard),standard,41.500,1.104,20.4174,0.4189,0.009084,0.6381
+V7_A5_TWO_STAGE (Standard),standard,42.733,1.136,21.3073,0.4480,0.007401,0.5843
+V7_OPT_BASE (DC-Preserving),dc_preserving,68.808,1.830,21.3444,0.4252,0.007338,0.6277
+V7_A5_TWO_STAGE (DC-Preserving),dc_preserving,76.584,2.037,24.2945,0.7417,0.003720,0.0831

@@ -1,0 +1,2 @@
+Version: V7_OPT_03
+Change Description: Candidate C: Full-Support Specialized Fast Path (preallocated mask, dead-copy removal, direct step assignment)

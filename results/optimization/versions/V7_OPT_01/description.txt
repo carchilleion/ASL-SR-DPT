@@ -1,0 +1,2 @@
+Version: V7_OPT_01
+Change Description: Candidate M: Eliminate diagnostic list allocations and per-iteration appends when return_diagnostics=False

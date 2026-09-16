@@ -1,0 +1,5 @@
+patience,runtime_ms_patch,speedup,psnr,ssim,mse,measurement_residual,coefficient_error,iterations,final_sigma,decision
+1,2.908,1.032x,15.4227,0.2062,0.028690,0.7253,1.2938,150.0,0.0100,REJECT
+2,2.882,1.042x,15.4227,0.2062,0.028690,0.7253,1.2938,150.0,0.0100,REJECT
+3,2.872,1.045x,15.4227,0.2062,0.028690,0.7253,1.2938,150.0,0.0100,REJECT
+5,2.933,1.023x,15.4227,0.2062,0.028690,0.7253,1.2938,150.0,0.0100,REJECT

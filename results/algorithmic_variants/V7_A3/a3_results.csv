@@ -1,0 +1,5 @@
+multiplier,active_support_ratio,mean_active_count,min_active_count,runtime_ms_patch,speedup,psnr,ssim,mse,measurement_residual,iterations,decision
+1e-05,0.9998,63.99,62,2.984,1.006x,15.4227,0.2062,0.028690,0.7253,150.0,NO_SPEEDUP_REJECT
+1e-04,0.9982,63.88,57,3.086,0.973x,15.3825,0.2057,0.028957,0.7274,150.0,NO_SPEEDUP_REJECT
+1e-03,0.9829,62.90,44,3.609,0.832x,15.2293,0.2040,0.029996,0.7349,150.0,REJECT
+1e-02,0.9378,60.02,12,3.773,0.796x,5.3717,0.1014,0.290291,0.3567,149.7,REJECT

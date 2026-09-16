@@ -1,0 +1,25 @@
+Tracemalloc Memory Profile for V7_BEST_CURRENT
+Current Memory: 1837.35 KiB
+Peak Memory:    1847.10 KiB
+
+Top 20 Memory Allocation Differences:
+C:\Users\Carlo Mendoza\OneDrive\Desktop\ASL-SR-DPT\code\hybrid_sparse_solver_v7_optimized.py:298: size=486 KiB (+486 KiB), count=15099 (+15099), average=33 B
+C:\Users\Carlo Mendoza\OneDrive\Desktop\ASL-SR-DPT\code\hybrid_sparse_solver_v7_optimized.py:197: size=352 KiB (+352 KiB), count=15000 (+15000), average=24 B
+C:\Users\Carlo Mendoza\OneDrive\Desktop\ASL-SR-DPT\code\hybrid_sparse_solver_v7_optimized.py:310: size=305 KiB (+305 KiB), count=12994 (+12994), average=24 B
+C:\Users\Carlo Mendoza\OneDrive\Desktop\ASL-SR-DPT\code\hybrid_sparse_solver_v7_optimized.py:250: size=134 KiB (+134 KiB), count=100 (+100), average=1376 B
+C:\Users\Carlo Mendoza\OneDrive\Desktop\ASL-SR-DPT\code\hybrid_sparse_solver_v7_optimized.py:201: size=134 KiB (+134 KiB), count=100 (+100), average=1376 B
+C:\Users\Carlo Mendoza\OneDrive\Desktop\ASL-SR-DPT\code\hybrid_sparse_solver_v7_optimized.py:200: size=134 KiB (+134 KiB), count=100 (+100), average=1376 B
+C:\Users\Carlo Mendoza\OneDrive\Desktop\ASL-SR-DPT\code\hybrid_sparse_solver_v7_optimized.py:199: size=134 KiB (+134 KiB), count=100 (+100), average=1376 B
+C:\Users\Carlo Mendoza\OneDrive\Desktop\ASL-SR-DPT\code\hybrid_sparse_solver_v7_optimized.py:236: size=55.4 KiB (+55.4 KiB), count=197 (+197), average=288 B
+C:\Users\Carlo Mendoza\OneDrive\Desktop\ASL-SR-DPT\code\hybrid_sparse_solver_v7_optimized.py:315: size=39.1 KiB (+39.1 KiB), count=100 (+100), average=400 B
+C:\Users\Carlo Mendoza\OneDrive\Desktop\ASL-SR-DPT\code\hybrid_sparse_solver_v7_optimized.py:257: size=15.3 KiB (+15.3 KiB), count=652 (+652), average=24 B
+C:\Users\Carlo Mendoza\OneDrive\Desktop\ASL-SR-DPT\code\hybrid_sparse_solver_v7_optimized.py:168: size=5600 B (+5600 B), count=100 (+100), average=56 B
+C:\Users\Carlo Mendoza\OneDrive\Desktop\ASL-SR-DPT\code\hybrid_sparse_solver_v7_optimized.py:167: size=5600 B (+5600 B), count=100 (+100), average=56 B
+C:\Users\Carlo Mendoza\OneDrive\Desktop\ASL-SR-DPT\code\hybrid_sparse_solver_v7_optimized.py:164: size=5600 B (+5600 B), count=100 (+100), average=56 B
+C:\Users\Carlo Mendoza\OneDrive\Desktop\ASL-SR-DPT\code\hybrid_sparse_solver_v7_optimized.py:163: size=5544 B (+5544 B), count=99 (+99), average=56 B
+C:\Users\Carlo Mendoza\OneDrive\Desktop\ASL-SR-DPT\code\hybrid_sparse_solver_v7_optimized.py:162: size=5544 B (+5544 B), count=99 (+99), average=56 B
+C:\Users\Carlo Mendoza\OneDrive\Desktop\ASL-SR-DPT\code\hybrid_sparse_solver_v7_optimized.py:294: size=4256 B (+4256 B), count=14 (+14), average=304 B
+C:\Users\Carlo Mendoza\OneDrive\Desktop\ASL-SR-DPT\code\hybrid_sparse_solver_v7_optimized.py:321: size=2424 B (+2424 B), count=101 (+101), average=24 B
+C:\Users\Carlo Mendoza\OneDrive\Desktop\ASL-SR-DPT\code\hybrid_sparse_solver_v7_optimized.py:319: size=2400 B (+2400 B), count=100 (+100), average=24 B
+C:\Users\Carlo Mendoza\OneDrive\Desktop\ASL-SR-DPT\code\hybrid_sparse_solver_v7_optimized.py:312: size=2400 B (+2400 B), count=100 (+100), average=24 B
+C:\Users\Carlo Mendoza\OneDrive\Desktop\ASL-SR-DPT\code\hybrid_sparse_solver_v7_optimized.py:156: size=2400 B (+2400 B), count=100 (+100), average=24 B

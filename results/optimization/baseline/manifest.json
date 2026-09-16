@@ -1,0 +1,79 @@
+{
+  "version_label": "V7_BASELINE",
+  "timestamp": "2026-09-08T06:23:00+08:00",
+  "status": "FROZEN_DO_NOT_MODIFY",
+  "files": {
+    "code/hybrid_sparse_solver_v7_fixed.py": "2cead540b71bd7816302d98f8136719296dd2c19c7c98e3c50b4c65734849a37",
+    "code/benchmark_runner.py": "5cfc3a9cb408b5937e1d8af03f9433660c37061de7d6de9462a2610c9c0894c2",
+    "code/sensing.py": "b145f8a644d385cc23e28450ea743473a2af81e3b465c999c753c7f4ac948a54",
+    "code/reconstruction.py": "87f706f6486c6bf0f91ab3dc9fd7c744f977ca7baab72ddb0aa09e4a2cbc5a12",
+    "code/metrics.py": "eaf8806c3c6ba80122f74b08ca51dc270195e867ced4dd96f40650320baa7324",
+    "configs/final_config.json": "d3619add2942fe04ea5eefccfd7c5570b2eae6a9156eec823acf0522b3c4346f"
+  },
+  "environment": {
+    "os": "Windows-11-10.0.26200-SP0",
+    "cpu": "Intel64 Family 6 Model 183 Stepping 1, GenuineIntel",
+    "python_version": "3.12.9 (tags/v3.12.9:fdb8142, Feb  4 2025, 15:27:58) [MSC v.1942 64 bit (AMD64)]",
+    "numpy_version": "2.4.3",
+    "scipy_version": "1.15.3",
+    "thread_environment": {
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "MKL_NUM_THREADS": "1",
+      "VECLIB_MAXIMUM_THREADS": "1",
+      "NUMEXPR_NUM_THREADS": "1"
+    }
+  },
+  "config": {
+    "patch_size": 8,
+    "stride": 2,
+    "N": 64,
+    "M": 38,
+    "M_ac": 37,
+    "compression_ratio": 0.6,
+    "noise_levels": [
+      15.0,
+      25.0,
+      50.0
+    ],
+    "sigma_init": null,
+    "sigma_min": 0.01,
+    "sigma_decay": 0.95,
+    "support_threshold_multiplier": 1e-05,
+    "support_reopen_interval": 3,
+    "armijo_c": 0.0001,
+    "beta_decay": 0.5,
+    "initial_mu": 0.2,
+    "max_backtracks": 10,
+    "tol": 1e-05,
+    "max_iter": 150,
+    "use_midpoint": true,
+    "threads": 1,
+    "lambda_reg": 0.1,
+    "lambda_lasso": 0.01,
+    "rho": 1.0,
+    "lasso_tol": 0.0001,
+    "lasso_max_iter": 100,
+    "omp_relative_residual_tol": 1e-05,
+    "omp_max_coefficients": 38,
+    "base_seed": 20260908,
+    "code_version": "v7.0.0-fixed",
+    "dataset_dir": "data/BSD68",
+    "output_dir": "results/raw",
+    "results_dir": "results",
+    "validation_parameters": {
+      "lambda_reg_grid": [
+        0.01,
+        0.05,
+        0.1,
+        0.2,
+        0.5
+      ],
+      "sigma_decay_grid": [
+        0.9,
+        0.95,
+        0.98
+      ]
+    }
+  }
+}

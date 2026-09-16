@@ -1,0 +1,11 @@
+metric,V7_OPT_BASE,V7_A2_SCALE_COUPLED,difference,decision
+runtime_ms_patch,3.002,2.829,-0.173,—
+speedup,1.000x,1.061x,+0.061x,—
+PSNR,15.4227,7.6274,-7.7953,—
+SSIM,0.2062,0.1862,-0.0200,—
+MSE,0.028690,0.172687,+0.143997,—
+measurement_residual,0.7253,0.0086,-0.7167,—
+coefficient_error,1.2938,3.1841,+1.8902,—
+dc_error,0.6735,2.2488,+1.5753,—
+ac_error,1.0345,2.2486,+1.2142,—
+iterations,150.0,150.0,+0.0,PROMISING

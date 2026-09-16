@@ -1,0 +1,2 @@
+Version: V7_OPT_02
+Change Description: Candidate J: Direct BLAS Euclidean norm computation in stopping condition

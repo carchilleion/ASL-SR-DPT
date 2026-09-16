@@ -1,0 +1,5 @@
+configuration,mean_psnr_all,mean_ssim_all,mean_solve_time_all,ms_per_patch,psnr_gain_vs_V7,runtime_ratio_vs_V7,residual_reduction_pct,dc_error_reduction_pct,decision
+V7_OPT_BASE,21.2157,0.5026,38.870,1.034,+0.0000,1.000x,+0.00%,+0.00%,REFERENCE
+V7_A5_TWO_STAGE,23.1309,0.5467,40.185,1.069,+1.9152,1.034x,+5.78%,+35.59%,PROMISING_DEBIAS
+V7_A6_DC_PRESERVATION,24.0014,0.6075,59.724,1.588,+2.7857,1.537x,+0.59%,+68.09%,PROMISING_ARCH
+V7_A5A6_COMBINED,22.6711,0.4816,66.781,1.776,+1.4554,1.718x,+85.41%,+68.09%,BEST_CANDIDATE

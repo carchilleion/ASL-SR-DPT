@@ -1,0 +1,42 @@
+{
+  "patch_size": 8,
+  "stride": 2,
+  "N": 64,
+  "M": 38,
+  "M_ac": 37,
+  "compression_ratio": 0.6,
+  "noise_levels": [
+    15,
+    25,
+    50
+  ],
+  "sigma_min": 0.01,
+  "sigma_decay": 0.95,
+  "support_threshold_multiplier": 1e-05,
+  "support_reopen_interval": 3,
+  "armijo_c": 0.0001,
+  "beta_decay": 0.5,
+  "initial_mu": 0.2,
+  "max_backtracks": 10,
+  "tol": 1e-05,
+  "max_iter": 150,
+  "use_midpoint": true,
+  "threads": 1,
+  "lambda_reg": 0.1,
+  "lasso_lambda": 0.01,
+  "lasso_rho": 1.0,
+  "lasso_tol": 0.0001,
+  "lasso_max_iter": 100,
+  "omp_relative_residual_tol": 1e-05,
+  "omp_max_coefficients": 38,
+  "base_seed": 42,
+  "dataset_dir": "data/BSD68",
+  "results_dir": "results",
+  "experiment": "E4",
+  "sensing_mode": "standard",
+  "solvers": [
+    "ASL-SR-DPT-MidpointON",
+    "ASL-SR-DPT-MidpointOFF"
+  ],
+  "description": "Midpoint descent acceleration ablation"
+}

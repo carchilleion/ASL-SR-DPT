@@ -1,0 +1,62 @@
+{
+  "config_name": "ASL-SR-DPT-PILOT-BENCHMARK-FROZEN",
+  "version": "v7.0.0-pilot",
+  "date_frozen": "2026-09-16",
+  "patch_size": 8,
+  "stride": 2,
+  "N": 64,
+  "M": 38,
+  "M_ac": 37,
+  "N_ac": 63,
+  "compression_ratio": 0.6,
+  "noise_levels": [15.0, 25.0, 50.0],
+  "trials": [1, 2, 3, 4, 5],
+  "solvers": ["ASL-SR-DPT", "OMP", "LASSO-ADMM"],
+  "team_assignments": {
+    "Team A": ["test001", "test002", "test003", "test004", "test005"],
+    "Team B": ["test006", "test007", "test008", "test009", "test010"]
+  },
+  "asl_sr_dpt": {
+    "sensing_mode": "dc_preserving",
+    "lambda_reg": 0.1,
+    "sigma_init": null,
+    "sigma_min": 0.01,
+    "sigma_decay": 0.95,
+    "max_iter": 150,
+    "tol": 1e-5,
+    "initial_mu": 0.2,
+    "armijo_c": 1e-4,
+    "beta_decay": 0.5,
+    "max_backtracks": 10,
+    "support_threshold_multiplier": 1e-5,
+    "support_reopen_interval": 3,
+    "use_midpoint": true,
+    "batch_size": 50
+  },
+  "omp": {
+    "sensing_mode": "standard",
+    "max_coefficients": 38,
+    "relative_residual_tol": 1e-5
+  },
+  "lasso_admm": {
+    "sensing_mode": "standard",
+    "lambda_lasso": 0.01,
+    "rho": 1.0,
+    "max_iter": 100,
+    "tol": 1e-4,
+    "internal_tol": 1e-5
+  },
+  "seed_protocol": {
+    "base_seed": 20260908,
+    "sensing_seed_formula": "base_seed + trial",
+    "noise_seed_formula": "base_seed + trial * 100000 + int(noise_sigma) * 1000 + int(image_id.replace('test', ''))"
+  },
+  "dataset_dir": "data/BSD68",
+  "results_dir": "results",
+  "thread_settings": {
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "MKL_NUM_THREADS": "1",
+    "NUMEXPR_NUM_THREADS": "1"
+  }
+}

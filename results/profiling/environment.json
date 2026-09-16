@@ -1,0 +1,98 @@
+{
+  "timestamp": "2026-09-08T06:08:00+08:00",
+  "git_status": "Working tree clean (untracked files present, non-git directory)",
+  "code_version": "v7.0.0-fixed",
+  "hardware": {
+    "cpu": "13th Gen Intel(R) Core(TM) i5-13450HX",
+    "architecture": "AMD64",
+    "physical_cores": 10,
+    "performance_cores": 6,
+    "efficient_cores": 4,
+    "logical_processors": 16,
+    "base_clock_ghz": 2.4,
+    "boost_clock_ghz": 4.6
+  },
+  "operating_system": {
+    "os": "Windows-11-10.0.26200-SP0",
+    "system": "Windows",
+    "release": "11",
+    "version": "10.0.26200"
+  },
+  "software_environment": {
+    "python_version": "3.12.9 (tags/v3.12.9:fdb8142, Feb  4 2025, 15:27:58) [MSC v.1942 64 bit (AMD64)]",
+    "numpy_version": "2.4.3",
+    "scipy_version": "1.15.3",
+    "thread_environment_enforced": {
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "MKL_NUM_THREADS": "1",
+      "VECLIB_MAXIMUM_THREADS": "1",
+      "NUMEXPR_NUM_THREADS": "1"
+    }
+  },
+  "exact_solver_file": "code/hybrid_sparse_solver_v7_fixed.py",
+  "exact_benchmark_runner_file": "code/benchmark_runner.py",
+  "code_hashes": {
+    "code/hybrid_sparse_solver_v7_fixed.py": "e209d659c7e4d8515ccfd1293db2b312c7233fd3ec151bfcd2ad690d0f297721",
+    "code/benchmark_runner.py": "57660869696dfa670b5ef23fe7d9ed80b7caf483f81af0c1e6cb7d3b968dc36c",
+    "code/sensing.py": "b145f8a644d385cc23e28450ea743473a2af81e3b465c999c753c7f4ac948a54",
+    "code/reconstruction.py": "87f706f6486c6bf0f91ab3dc9fd7c744f977ca7baab72ddb0aa09e4a2cbc5a12",
+    "code/metrics.py": "eaf8806c3c6ba80122f74b08ca51dc270195e867ced4dd96f40650320baa7324",
+    "code/dataset.py": "1df1bb389395f64993f1330739688b28ca5584ed95c7ebc2c5bd86fa156c654b",
+    "code/summary.py": "b6debf0ad8c39aef8339e2610d5a1dac68300cf386d8f59f9ebb1d03fe4385b2",
+    "configs/final_config.json": "d3619add2942fe04ea5eefccfd7c5570b2eae6a9156eec823acf0522b3c4346f"
+  },
+  "final_config": {
+    "patch_size": 8,
+    "stride": 2,
+    "N": 64,
+    "M": 38,
+    "M_ac": 37,
+    "compression_ratio": 0.6,
+    "noise_levels": [
+      15.0,
+      25.0,
+      50.0
+    ],
+    "sigma_init": null,
+    "sigma_min": 0.01,
+    "sigma_decay": 0.95,
+    "support_threshold_multiplier": 1e-05,
+    "support_reopen_interval": 3,
+    "armijo_c": 0.0001,
+    "beta_decay": 0.5,
+    "initial_mu": 0.2,
+    "max_backtracks": 10,
+    "tol": 1e-05,
+    "max_iter": 150,
+    "use_midpoint": true,
+    "threads": 1,
+    "lambda_reg": 0.1,
+    "lambda_lasso": 0.01,
+    "rho": 1.0,
+    "lasso_tol": 0.0001,
+    "lasso_max_iter": 100,
+    "omp_relative_residual_tol": 1e-05,
+    "omp_max_coefficients": 38,
+    "base_seed": 20260908,
+    "code_version": "v7.0.0-fixed",
+    "dataset_dir": "data/BSD68",
+    "output_dir": "results/raw",
+    "results_dir": "results",
+    "validation_parameters": {
+      "lambda_reg_grid": [
+        0.01,
+        0.05,
+        0.1,
+        0.2,
+        0.5
+      ],
+      "sigma_decay_grid": [
+        0.9,
+        0.95,
+        0.98
+      ]
+    }
+  },
+  "vm_profile_notes": "Host development environment on Lenovo LOQ 15IRX9. Benchmark methodology specifies VM Mobile Profile (1 vCPU package, 4 cores, 8GB RAM, Ubuntu 24.04 LTS) for zero-jitter runs; profiling conducted under enforced single-thread lock (OMP/OPENBLAS/MKL=1)."
+}

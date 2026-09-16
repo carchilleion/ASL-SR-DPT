@@ -1,0 +1,2 @@
+Version: V7_OPT_06
+Change Description: Candidate L: Fast primary candidate evaluation in line search

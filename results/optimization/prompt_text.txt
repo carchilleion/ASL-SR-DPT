@@ -1,0 +1,752 @@
+<USER_REQUEST>
+/goal 
+ASL-SR-DPT PERFORMANCE OPTIMIZATION AND ROOT-CAUSE FIX
+
+You are working on my undergraduate research repository:
+
+ASL-SR-DPT
+Accelerated Single-Loop Sparse Recovery with Dynamic Parameter Tuning
+
+We have completed controlled profiling of the current V7 implementation.
+
+The profiling identified substantial runtime and algorithm-behavior problems.
+
+Your task now is to FIX the identified problems while preserving the mathematical definition of ASL-SR-DPT.
+
+This is NOT a request to redesign the research algorithm.
+
+==================================================
+ABSOLUTE RULE
+==================================================
+
+Preserve the mathematical behavior of the current approved V7 algorithm unless a change is explicitly listed as an algorithmic ablation.
+
+Do NOT:
+- change the objective function
+- change the analytical gradient
+- change lambda
+- change sigma_min
+- change sigma_decay
+- change the active-support threshold
+- change support reopening frequency
+- change the convergence definition
+- change the sensing model
+- change DCT ordering
+- change the reconstruction method
+- change the noise model
+- change the benchmark dataset
+- change the research questions
+- tune parameters to improve results
+
+The first optimization stage must consist of mathematically equivalent implementation-level optimizations.
+
+Every optimization must be tested against the frozen V7 baseline.
+
+==================================================
+CURRENT BASELINE EVIDENCE
+==================================================
+
+The current profiling study found approximately:
+
+- 137.7 ASL-SR-DPT iterations per patch
+- 99.98% active-support ratio
+- 98.98% of iterations have all 64 coefficients active
+- about 99.19% of the pipeline time occurs in ASL-SR-DPT
+- gradient evaluation ~30.23%
+- internal validation/loop overhead ~24.75%
+- objective evaluation ~19.14%
+- Armijo candidate evaluation ~18.98%
+- midpoint evaluation ~0.95%
+- reconstruction/DCT/IDCT/metrics contribute less than 1%
+- 0 failed line searches
+- midpoint accepted only about 4.88% of steps
+- midpoint ON/OFF showed essentially identical quality
+- warm-start gave only modest runtime benefit
+- active-support pruning is currently almost ineffective
+
+The exact profiling evidence is stored in:
+
+results/profiling/
+
+including:
+- ROOT_CAUSE_REPORT.md
+- time_breakdown.csv
+- asl_operation_counts.csv
+- active_support.csv
+- sigma_behavior.csv
+- line_search.csv
+- midpoint_comparison.csv
+- initialization_comparison.csv
+- solver_patch_comparison.csv
+- scaling.csv
+- standard_vs_dc_profile.csv
+- repeated_computation_report.md
+- operation_estimate.md
+- environment.json
+
+==================================================
+PHASE 1. FREEZE THE ORIGINAL BASELINE
+==================================================
+
+Before modifying the solver:
+
+1. Compute and save SHA-256 hashes for:
+   - hybrid_sparse_solver_v7_fixed.py
+   - benchmark_runner.py
+   - sensing.py
+   - reconstruction.py
+   - metrics.py
+   - final_config.json
+
+2. Create:
+
+results/optimization/baseline/
+
+3. Copy the baseline files there.
+
+4. Store:
+   - code hashes
+   - Python version
+   - NumPy version
+   - SciPy version
+   - OS
+   - CPU
+   - thread environment
+   - config
+
+5. Give the baseline an explicit version label:
+
+V7_BASELINE
+
+Do not modify V7_BASELINE.
+
+==================================================
+PHASE 2. BUILD AN OPTIMIZED COPY
+==================================================
+
+Create:
+
+hybrid_sparse_solver_v7_optimized.py
+
+Do not overwrite the baseline.
+
+The optimized implementation must initially preserve:
+
+- exact objective
+- exact gradient
+- exact sigma initialization
+- exact sigma decay
+- exact Armijo condition
+- exact midpoint formula
+- exact support threshold
+- exact support reopening
+- exact stopping condition
+
+==================================================
+PHASE 3. OPTIMIZATION #1
+SHARED RESIDUAL / EXPONENTIAL CALCULATION
+==================================================
+
+Current problem:
+
+The objective and gradient independently calculate quantities that overlap.
+
+Current objective conceptually does:
+
+r = A @ z - y
+
+and:
+
+exp(-z^2/(2 sigma^2))
+
+The gradient separately calculates residual/exponential terms.
+
+Refactor the internal solver so values already computed during an iteration are reused.
+
+At minimum investigate caching:
+
+r = A @ z - y
+
+and:
+
+w = exp(-z^2/(2 sigma^2))
+
+when mathematically valid.
+
+Do not alter floating-point semantics more than necessary.
+
+Record:
+- number of matrix-vector products
+- number of exp evaluations
+- runtime
+- objective values
+- gradient values
+
+The optimized version must pass numerical equivalence tests.
+
+==================================================
+PHASE 4. OPTIMIZATION #2
+REMOVE REPEATED INPUT VALIDATION FROM INNER LOOPS
+==================================================
+
+The profiler found excessive calls to:
+
+_validate_inputs()
+
+including repeated:
+
+np.isfinite()
+
+inside numerical loops.
+
+The solver inputs are already validated before entering the iteration loop.
+
+Refactor so:
+
+- public solver entry validates inputs
+- inner objective/gradient helpers assume validated float64 arrays
+- repeated expensive full-array validation is removed from inner loops
+
+Do not remove validation from the public API.
+
+Keep safety at the outer boundary.
+
+Test:
+- valid inputs
+- invalid inputs
+- NaN
+- Inf
+- wrong dimensions
+
+Then compare runtime before/after.
+
+==================================================
+PHASE 5. OPTIMIZATION #3
+LINEAR RESIDUAL UPDATE
+==================================================
+
+Current candidate evaluation recomputes:
+
+A @ z_candidate - y
+
+For a candidate:
+
+z_candidate = z + mu*d
+
+use the identity:
+
+A(z + mu d) - y
+=
+(Az - y) + mu(Ad)
+
+Therefore:
+
+r_candidate = r + mu * A_d
+
+where:
+
+A_d = A @ d
+
+Compute A_d once for the current direction when mathematically valid.
+
+Then use it for candidate residual evaluation.
+
+For midpoint:
+
+r_mid = r + 0.5 * mu * A_d
+
+Do NOT change the objective.
+
+The optimized code must produce numerical results equivalent to the baseline to an explicitly tested tolerance.
+
+Test:
+- objective candidate values
+- Armijo decisions
+- final z
+- final residual
+- iterations
+- sigma trajectory
+
+==================================================
+PHASE 6. OPTIMIZATION #4
+CACHE THE CURRENT OBJECTIVE STATE
+==================================================
+
+Do not recalculate the current objective unnecessarily.
+
+At each accepted step:
+
+- candidate objective becomes the current objective
+- current residual becomes candidate residual
+- current exponential state can be reused if valid
+
+Ensure:
+- no stale cache survives a changed sigma
+- no stale cache survives a changed z
+- no stale cache survives support changes
+
+Add assertions in debug mode to detect stale state.
+
+==================================================
+PHASE 7. OPTIMIZATION #5
+MIDPOINT TOGGLE
+==================================================
+
+Do not remove midpoint from the implementation.
+
+Keep:
+
+use_midpoint=True/False
+
+But make sure the midpoint branch is evaluated only when the primary Armijo candidate fails.
+
+This must remain the same mathematical behavior as the current V7 implementation.
+
+Do NOT automatically set it to False yet.
+
+We already have an E4 ablation.
+
+The optimization task is only to eliminate unnecessary midpoint work when midpoint is not needed.
+
+==================================================
+PHASE 8. OPTIMIZATION #6
+AVOID UNNECESSARY ACTIVE-SET ALLOCATION
+==================================================
+
+Current code performs:
+
+A_active = A[:, active_indices]
+
+which can create temporary arrays and indexing overhead.
+
+Investigate whether:
+
+- boolean masks
+- integer index arrays
+- full-vector operations
+- reusable buffers
+
+reduce allocation overhead.
+
+Do not change the actual active set.
+
+Do not change:
+
+|z_i| > 1e-5*sigma
+
+Do not change support reopening.
+
+The optimization must preserve the exact active coefficients used in the gradient.
+
+==================================================
+PHASE 9. ACTIVE-SUPPORT INVESTIGATION
+NOT AUTOMATICALLY A CODE CHANGE
+==================================================
+
+The current active-support ratio is approximately:
+
+0.9998
+
+This means the support pruning mechanism is currently almost inactive.
+
+Do NOT change the threshold yet.
+
+Instead produce a diagnostic explaining:
+
+1. coefficient magnitude distribution
+2. percentage below threshold
+3. active count by sigma
+4. active count by iteration
+5. active count before and after support reopening
+
+Create:
+
+results/optimization/active_support_diagnosis.csv
+
+and:
+
+results/optimization/active_support_diagnosis.md
+
+==================================================
+PHASE 10. CONTINUATION INVESTIGATION
+NOT AUTOMATICALLY A CODE CHANGE
+==================================================
+
+The baseline effectively needs roughly 135 iterations to reach sigma_min because:
+
+sigma_0 ≈ 9.9
+sigma_min = 0.01
+decay = 0.95
+
+Do NOT change this rule in the optimized implementation.
+
+Instead measure:
+
+- iterations before sigma < 1
+- iterations before sigma < 0.1
+- iterations before sigma < 0.01
+- iterations at sigma_min
+- percentage hitting max_iter
+- percentage converging at sigma_min
+
+Create:
+
+results/optimization/continuation_diagnosis.csv
+
+The report must explain how much runtime is structurally caused by continuation.
+
+==================================================
+PHASE 11. OBJECTIVE-SCALE INVESTIGATION
+NOT AUTOMATICALLY A CODE CHANGE
+==================================================
+
+At each selected sigma, record:
+
+data_fidelity
+sparsity_term
+total_objective
+gradient_fidelity_norm
+gradient_sparsity_norm
+gradient_total_norm
+
+At sigma = 0.01 calculate:
+
+lambda / sigma^2
+
+but do not assume this scalar alone proves gradient dominance.
+
+Also calculate the actual:
+
+||gradient_fidelity||_2
+
+||gradient_sparsity||_2
+
+Then calculate:
+
+gradient_ratio =
+||gradient_sparsity||_2 /
+max(||gradient_fidelity||_2, epsilon)
+
+This is more meaningful than comparing only lambda/sigma^2.
+
+Create:
+
+results/optimization/gradient_balance.csv
+
+==================================================
+PHASE 12. FIX THE QUALITY DIAGNOSIS
+==================================================
+
+The baseline has high measurement residual.
+
+Measure:
+
+||A z - y||_2
+
+and coefficient-domain errors relative to the clean DCT coefficient vector:
+
+||theta_hat - theta_clean||_2
+
+DC error:
+
+|theta_hat[0] - theta_clean[0]|
+
+AC error:
+
+||theta_hat[1:] - theta_clean[1:]||_2
+
+Do this for:
+- ASL-SR-DPT
+- OMP
+- LASSO-ADMM
+
+Use the same A and y.
+
+Create:
+
+results/optimization/quality_error_decomposition.csv
+
+==================================================
+PHASE 13. PROVE MATHEMATICAL EQUIVALENCE
+==================================================
+
+For a deterministic set of 500 patches:
+
+Run:
+
+V7_BASELINE
+
+and:
+
+V7_OPTIMIZED
+
+with exactly:
+
+- same A
+- same y
+- same random seeds
+- same parameters
+- same midpoint setting
+
+Compare:
+
+- final z
+- final objective
+- final residual
+- iterations
+- sigma trajectory
+- active support
+- stop reason
+- accepted steps
+
+Calculate maximum absolute differences.
+
+Expected:
+very small floating-point differences only.
+
+If differences are large:
+STOP.
+
+Do not continue optimization until the discrepancy is explained.
+
+==================================================
+PHASE 14. PERFORMANCE COMPARISON
+==================================================
+
+Run exactly:
+
+500 patches
+standard sensing
+sigma_noise = 15
+
+Compare:
+
+V7_BASELINE
+V7_OPTIMIZED
+
+Measure:
+
+- total runtime
+- mean ms/patch
+- objective evaluations
+- gradient evaluations
+- matrix-vector operations
+- exp calls
+- iterations
+- residual
+- active-support ratio
+- PSNR
+- SSIM
+- MSE
+
+Create:
+
+results/optimization/before_after.csv
+
+Calculate:
+
+runtime_reduction_percent
+
+==================================================
+PHASE 15. SCALING TEST
+==================================================
+
+Run:
+
+100 patches
+250 patches
+500 patches
+1000 patches
+
+for both versions.
+
+Record:
+
+patch_count
+baseline_time
+optimized_time
+baseline_ms_patch
+optimized_ms_patch
+speedup
+mean_iterations
+active_ratio
+
+Create:
+
+results/optimization/scaling_before_after.csv
+
+==================================================
+PHASE 16. FULL IMAGE PILOT
+==================================================
+
+Only after mathematical equivalence is confirmed:
+
+Run test001:
+
+- 37,604 patches
+- sigma = 15
+- standard sensing
+
+Run both:
+
+V7_BASELINE
+V7_OPTIMIZED
+
+Record:
+
+total solve time
+mean time/patch
+PSNR
+SSIM
+MSE
+iterations
+residual
+active ratio
+
+Do NOT run 50 trials yet.
+
+==================================================
+PHASE 17. DC-PRESERVING PILOT
+==================================================
+
+Run one complete test001 image:
+
+- DC-preserving sensing
+- sigma = 15
+
+Compare:
+
+V7_BASELINE
+V7_OPTIMIZED
+
+Ensure the same DC-preserving path is used.
+
+==================================================
+PHASE 18. DO NOT CHANGE RESEARCH PARAMETERS
+==================================================
+
+Do NOT change:
+
+lambda_reg = 0.1
+sigma_min = 0.01
+sigma_decay = 0.95
+tol = 1e-5
+max_iter = 150
+initial_mu = 0.2
+Armijo c = 1e-4
+beta = 0.5
+support threshold = 1e-5 * sigma
+support reopening = every 3 iterations
+
+unless a separate explicitly labelled algorithmic ablation is created.
+
+The first goal is implementation optimization without changing these values.
+
+==================================================
+PHASE 19. SEPARATE EQUIVALENT OPTIMIZATION FROM ALGORITHM MODIFICATION
+==================================================
+
+Classify every proposed change:
+
+A = mathematically equivalent code optimization
+B = numerical implementation change that might alter trajectories
+C = algorithmic modification
+
+Only A changes are permitted in this task.
+
+B and C must be listed for future experiments and NOT implemented.
+
+==================================================
+PHASE 20. FINAL ROOT-CAUSE REPORT
+==================================================
+
+Update:
+
+results/optimization/OPTIMIZATION_REPORT.md
+
+Sections:
+
+1. Baseline
+2. Environment
+3. Runtime bottlenecks
+4. Objective/gradient bottlenecks
+5. Active-support diagnosis
+6. Continuation diagnosis
+7. Line-search diagnosis
+8. Midpoint diagnosis
+9. Quality-error diagnosis
+10. Implemented equivalent optimizations
+11. Before/after runtime
+12. Numerical equivalence
+13. Memory behavior
+14. Remaining algorithmic bottlenecks
+15. Recommended future algorithmic experiments
+16. Final recommendation
+
+==================================================
+SUCCESS CRITERIA
+==================================================
+
+The optimization task is successful only if:
+
+1. All existing tests pass.
+2. New equivalence tests pass.
+3. V7 baseline remains untouched.
+4. Optimized version produces nearly identical numerical results.
+5. Runtime decreases meaningfully.
+6. No metric regression occurs beyond documented floating-point tolerance.
+7. Raw profiling data are preserved.
+8. No final 50-trial benchmark is launched.
+
+==================================================
+FINAL RESPONSE
+==================================================
+
+Report:
+
+- exact files changed
+- exact files created
+- exact optimizations implemented
+- numerical equivalence results
+- baseline runtime
+- optimized runtime
+- percentage runtime reduction
+- objective evaluation reduction
+- gradient evaluation reduction
+- active-support findings
+- continuation findings
+- quality-error findings
+- memory findings
+- remaining problems
+- recommended next algorithmic experiment
+
+Most importantly:
+
+DO NOT claim ASL-SR-DPT is now efficient unless the measured runtime supports that statement.
+
+DO NOT claim the research problem is solved merely because runtime improved.
+
+==================================================
+FIRST ACTION
+==================================================
+
+Before editing code:
+
+1. Inspect the current profiler outputs.
+2. Inspect hybrid_sparse_solver_v7_fixed.py.
+3. Inspect benchmark_runner.py.
+4. Inspect final_config.json.
+5. Verify the exact current baseline.
+6. Create the frozen V7_BASELINE copy.
+7. Then implement only mathematically equivalent optimizations.
+
+Do not start the full benchmark.
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-09-08T06:22:08+08:00.
+
+The user has mentioned some items in the form @[ITEM]. Here is extra information about the items that were mentioned by the user, in the order that they appear:
+
+/goal is a [Slash Command]:
+The user has marked this task with /goal, indicating that this task is intended to run for a long time without user input, e.g. overnight. You should be extra thorough and only stop when you are confident the goal has been completely fulfilled. The system will force you to continue execution, prompting you to audit your work until completion. Once complete, include <!-- GOAL_COMPLETE --> in your response. If the user explicitly asked to stop or cancel this goal, include <!-- GOAL_CANCELLED --> in your response to cancel the goal.
+</ADDITIONAL_METADATA>

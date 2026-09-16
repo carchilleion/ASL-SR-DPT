@@ -1,0 +1,405 @@
+{
+  "base_seed": 20260908,
+  "total_trials": 50,
+  "total_images": 68,
+  "noise_levels": [
+    15.0,
+    25.0,
+    50.0
+  ],
+  "total_noise_conditions": 10200,
+  "sensing_seed_formula": "base_seed + trial",
+  "noise_seed_formula": "base_seed + trial * 100000 + int(noise_sigma) * 1000 + image_idx",
+  "parity_rules": {
+    "noise_parity": "Identical noise_seed passed to add_awgn() for all 4 solvers (V7_OPT_BASE, V7_A6_DC_PRESERVATION, OMP, LASSO-ADMM).",
+    "sensing_parity_standard": "Identical sensing_seed passed to generate_random_sensing(38, 64) for V7, OMP, LASSO-ADMM.",
+    "sensing_parity_dc": "Identical sensing_seed passed to generate_dc_sensing(37, 63) for A6.",
+    "matrix_reuse": "One sensing matrix generated per trial and reused across all patches and images in that trial."
+  },
+  "sample_verification_records": [
+    {
+      "trial": 1,
+      "noise_sigma": 15.0,
+      "image_id": "test001",
+      "image_idx": 1,
+      "sensing_seed": 20260909,
+      "noise_seed": 20375909
+    },
+    {
+      "trial": 1,
+      "noise_sigma": 15.0,
+      "image_id": "test002",
+      "image_idx": 2,
+      "sensing_seed": 20260909,
+      "noise_seed": 20375910
+    },
+    {
+      "trial": 1,
+      "noise_sigma": 15.0,
+      "image_id": "test034",
+      "image_idx": 34,
+      "sensing_seed": 20260909,
+      "noise_seed": 20375942
+    },
+    {
+      "trial": 1,
+      "noise_sigma": 15.0,
+      "image_id": "test068",
+      "image_idx": 68,
+      "sensing_seed": 20260909,
+      "noise_seed": 20375976
+    },
+    {
+      "trial": 1,
+      "noise_sigma": 25.0,
+      "image_id": "test001",
+      "image_idx": 1,
+      "sensing_seed": 20260909,
+      "noise_seed": 20385909
+    },
+    {
+      "trial": 1,
+      "noise_sigma": 25.0,
+      "image_id": "test002",
+      "image_idx": 2,
+      "sensing_seed": 20260909,
+      "noise_seed": 20385910
+    },
+    {
+      "trial": 1,
+      "noise_sigma": 25.0,
+      "image_id": "test034",
+      "image_idx": 34,
+      "sensing_seed": 20260909,
+      "noise_seed": 20385942
+    },
+    {
+      "trial": 1,
+      "noise_sigma": 25.0,
+      "image_id": "test068",
+      "image_idx": 68,
+      "sensing_seed": 20260909,
+      "noise_seed": 20385976
+    },
+    {
+      "trial": 1,
+      "noise_sigma": 50.0,
+      "image_id": "test001",
+      "image_idx": 1,
+      "sensing_seed": 20260909,
+      "noise_seed": 20410909
+    },
+    {
+      "trial": 1,
+      "noise_sigma": 50.0,
+      "image_id": "test002",
+      "image_idx": 2,
+      "sensing_seed": 20260909,
+      "noise_seed": 20410910
+    },
+    {
+      "trial": 1,
+      "noise_sigma": 50.0,
+      "image_id": "test034",
+      "image_idx": 34,
+      "sensing_seed": 20260909,
+      "noise_seed": 20410942
+    },
+    {
+      "trial": 1,
+      "noise_sigma": 50.0,
+      "image_id": "test068",
+      "image_idx": 68,
+      "sensing_seed": 20260909,
+      "noise_seed": 20410976
+    },
+    {
+      "trial": 2,
+      "noise_sigma": 15.0,
+      "image_id": "test001",
+      "image_idx": 1,
+      "sensing_seed": 20260910,
+      "noise_seed": 20475909
+    },
+    {
+      "trial": 2,
+      "noise_sigma": 15.0,
+      "image_id": "test002",
+      "image_idx": 2,
+      "sensing_seed": 20260910,
+      "noise_seed": 20475910
+    },
+    {
+      "trial": 2,
+      "noise_sigma": 15.0,
+      "image_id": "test034",
+      "image_idx": 34,
+      "sensing_seed": 20260910,
+      "noise_seed": 20475942
+    },
+    {
+      "trial": 2,
+      "noise_sigma": 15.0,
+      "image_id": "test068",
+      "image_idx": 68,
+      "sensing_seed": 20260910,
+      "noise_seed": 20475976
+    },
+    {
+      "trial": 2,
+      "noise_sigma": 25.0,
+      "image_id": "test001",
+      "image_idx": 1,
+      "sensing_seed": 20260910,
+      "noise_seed": 20485909
+    },
+    {
+      "trial": 2,
+      "noise_sigma": 25.0,
+      "image_id": "test002",
+      "image_idx": 2,
+      "sensing_seed": 20260910,
+      "noise_seed": 20485910
+    },
+    {
+      "trial": 2,
+      "noise_sigma": 25.0,
+      "image_id": "test034",
+      "image_idx": 34,
+      "sensing_seed": 20260910,
+      "noise_seed": 20485942
+    },
+    {
+      "trial": 2,
+      "noise_sigma": 25.0,
+      "image_id": "test068",
+      "image_idx": 68,
+      "sensing_seed": 20260910,
+      "noise_seed": 20485976
+    },
+    {
+      "trial": 2,
+      "noise_sigma": 50.0,
+      "image_id": "test001",
+      "image_idx": 1,
+      "sensing_seed": 20260910,
+      "noise_seed": 20510909
+    },
+    {
+      "trial": 2,
+      "noise_sigma": 50.0,
+      "image_id": "test002",
+      "image_idx": 2,
+      "sensing_seed": 20260910,
+      "noise_seed": 20510910
+    },
+    {
+      "trial": 2,
+      "noise_sigma": 50.0,
+      "image_id": "test034",
+      "image_idx": 34,
+      "sensing_seed": 20260910,
+      "noise_seed": 20510942
+    },
+    {
+      "trial": 2,
+      "noise_sigma": 50.0,
+      "image_id": "test068",
+      "image_idx": 68,
+      "sensing_seed": 20260910,
+      "noise_seed": 20510976
+    },
+    {
+      "trial": 25,
+      "noise_sigma": 15.0,
+      "image_id": "test001",
+      "image_idx": 1,
+      "sensing_seed": 20260933,
+      "noise_seed": 22775909
+    },
+    {
+      "trial": 25,
+      "noise_sigma": 15.0,
+      "image_id": "test002",
+      "image_idx": 2,
+      "sensing_seed": 20260933,
+      "noise_seed": 22775910
+    },
+    {
+      "trial": 25,
+      "noise_sigma": 15.0,
+      "image_id": "test034",
+      "image_idx": 34,
+      "sensing_seed": 20260933,
+      "noise_seed": 22775942
+    },
+    {
+      "trial": 25,
+      "noise_sigma": 15.0,
+      "image_id": "test068",
+      "image_idx": 68,
+      "sensing_seed": 20260933,
+      "noise_seed": 22775976
+    },
+    {
+      "trial": 25,
+      "noise_sigma": 25.0,
+      "image_id": "test001",
+      "image_idx": 1,
+      "sensing_seed": 20260933,
+      "noise_seed": 22785909
+    },
+    {
+      "trial": 25,
+      "noise_sigma": 25.0,
+      "image_id": "test002",
+      "image_idx": 2,
+      "sensing_seed": 20260933,
+      "noise_seed": 22785910
+    },
+    {
+      "trial": 25,
+      "noise_sigma": 25.0,
+      "image_id": "test034",
+      "image_idx": 34,
+      "sensing_seed": 20260933,
+      "noise_seed": 22785942
+    },
+    {
+      "trial": 25,
+      "noise_sigma": 25.0,
+      "image_id": "test068",
+      "image_idx": 68,
+      "sensing_seed": 20260933,
+      "noise_seed": 22785976
+    },
+    {
+      "trial": 25,
+      "noise_sigma": 50.0,
+      "image_id": "test001",
+      "image_idx": 1,
+      "sensing_seed": 20260933,
+      "noise_seed": 22810909
+    },
+    {
+      "trial": 25,
+      "noise_sigma": 50.0,
+      "image_id": "test002",
+      "image_idx": 2,
+      "sensing_seed": 20260933,
+      "noise_seed": 22810910
+    },
+    {
+      "trial": 25,
+      "noise_sigma": 50.0,
+      "image_id": "test034",
+      "image_idx": 34,
+      "sensing_seed": 20260933,
+      "noise_seed": 22810942
+    },
+    {
+      "trial": 25,
+      "noise_sigma": 50.0,
+      "image_id": "test068",
+      "image_idx": 68,
+      "sensing_seed": 20260933,
+      "noise_seed": 22810976
+    },
+    {
+      "trial": 50,
+      "noise_sigma": 15.0,
+      "image_id": "test001",
+      "image_idx": 1,
+      "sensing_seed": 20260958,
+      "noise_seed": 25275909
+    },
+    {
+      "trial": 50,
+      "noise_sigma": 15.0,
+      "image_id": "test002",
+      "image_idx": 2,
+      "sensing_seed": 20260958,
+      "noise_seed": 25275910
+    },
+    {
+      "trial": 50,
+      "noise_sigma": 15.0,
+      "image_id": "test034",
+      "image_idx": 34,
+      "sensing_seed": 20260958,
+      "noise_seed": 25275942
+    },
+    {
+      "trial": 50,
+      "noise_sigma": 15.0,
+      "image_id": "test068",
+      "image_idx": 68,
+      "sensing_seed": 20260958,
+      "noise_seed": 25275976
+    },
+    {
+      "trial": 50,
+      "noise_sigma": 25.0,
+      "image_id": "test001",
+      "image_idx": 1,
+      "sensing_seed": 20260958,
+      "noise_seed": 25285909
+    },
+    {
+      "trial": 50,
+      "noise_sigma": 25.0,
+      "image_id": "test002",
+      "image_idx": 2,
+      "sensing_seed": 20260958,
+      "noise_seed": 25285910
+    },
+    {
+      "trial": 50,
+      "noise_sigma": 25.0,
+      "image_id": "test034",
+      "image_idx": 34,
+      "sensing_seed": 20260958,
+      "noise_seed": 25285942
+    },
+    {
+      "trial": 50,
+      "noise_sigma": 25.0,
+      "image_id": "test068",
+      "image_idx": 68,
+      "sensing_seed": 20260958,
+      "noise_seed": 25285976
+    },
+    {
+      "trial": 50,
+      "noise_sigma": 50.0,
+      "image_id": "test001",
+      "image_idx": 1,
+      "sensing_seed": 20260958,
+      "noise_seed": 25310909
+    },
+    {
+      "trial": 50,
+      "noise_sigma": 50.0,
+      "image_id": "test002",
+      "image_idx": 2,
+      "sensing_seed": 20260958,
+      "noise_seed": 25310910
+    },
+    {
+      "trial": 50,
+      "noise_sigma": 50.0,
+      "image_id": "test034",
+      "image_idx": 34,
+      "sensing_seed": 20260958,
+      "noise_seed": 25310942
+    },
+    {
+      "trial": 50,
+      "noise_sigma": 50.0,
+      "image_id": "test068",
+      "image_idx": 68,
+      "sensing_seed": 20260958,
+      "noise_seed": 25310976
+    }
+  ]
+}

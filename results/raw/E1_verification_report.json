@@ -1,0 +1,62 @@
+{
+  "1_bsd68_loading": {
+    "status": "PASSED",
+    "info": "Loaded 5 images successfully"
+  },
+  "2_grayscale_normalized": {
+    "status": "PASSED",
+    "info": "Shape (481, 321), min=0.00, max=1.00"
+  },
+  "3_dct_idct_identity": {
+    "status": "PASSED",
+    "info": "Max abs error = 4.44e-16"
+  },
+  "4_sensing_dimensions_and_norm": {
+    "status": "PASSED",
+    "info": "Shape (38, 64), row norms = 1.0"
+  },
+  "5_pinv_dimensions_and_properties": {
+    "status": "PASSED",
+    "info": "Shape (64, 38), A @ P @ A = A verified"
+  },
+  "6_measurement_dimensions": {
+    "status": "PASSED",
+    "info": "Standard y=(38,), DC y_ac=(37,), DC restored"
+  },
+  "7_objective_finite": {
+    "status": "PASSED",
+    "info": "Evaluated objective = -5.0311"
+  },
+  "8_gradient_finite": {
+    "status": "PASSED",
+    "info": "Evaluated gradient norm = 0.3480"
+  },
+  "9_numerical_gradient_check": {
+    "status": "PASSED",
+    "info": "Max diff=6.99e-10, rel diff=6.86e-09"
+  },
+  "10_asl_sr_dpt_smoke_run": {
+    "status": "PASSED",
+    "info": "Completed 20 iters, final sigma=1.4223"
+  },
+  "11_omp_smoke_run": {
+    "status": "PASSED",
+    "info": "OMP selected 15 atoms"
+  },
+  "12_lasso_smoke_run": {
+    "status": "PASSED",
+    "info": "LASSO-ADMM completed 25 iters"
+  },
+  "13_reconstruction_pipeline": {
+    "status": "PASSED",
+    "info": "Reconstructed shape (64, 64)"
+  },
+  "14_metrics_computation": {
+    "status": "PASSED",
+    "info": "MSE=0.00698, PSNR=21.56dB, SSIM=0.5021"
+  },
+  "15_no_nan_or_inf": {
+    "status": "PASSED",
+    "info": "All outputs verified strictly finite"
+  }
+}

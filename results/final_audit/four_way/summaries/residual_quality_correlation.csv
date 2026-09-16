@@ -1,0 +1,5 @@
+scope,pearson_res_vs_psnr,spearman_res_vs_psnr,pearson_res_vs_ssim,spearman_res_vs_ssim,pearson_res_vs_mse,spearman_res_vs_mse,finding
+sigma=15.0,-0.1486 (p=3.600e-01),-0.4837 (p=1.567e-03),-0.4028 (p=9.968e-03),-0.4591 (p=2.884e-03),-0.0250 (p=8.784e-01),+0.4837 (p=1.567e-03),Across-noise paradox (higher noise increases both residual and distortion)
+sigma=25.0,+0.3350 (p=3.462e-02),+0.0306 (p=8.514e-01),+0.3968 (p=1.124e-02),+0.2435 (p=1.300e-01),-0.2784 (p=8.194e-02),-0.0306 (p=8.514e-01),Across-noise paradox (higher noise increases both residual and distortion)
+sigma=50.0,+0.7858 (p=1.903e-09),+0.6711 (p=2.143e-06),+0.8329 (p=2.620e-11),+0.7872 (p=1.690e-09),-0.6712 (p=2.138e-06),-0.6711 (p=2.143e-06),Across-noise paradox (higher noise increases both residual and distortion)
+OVERALL,+0.2349 (p=9.823e-03),+0.1128 (p=2.202e-01),+0.1999 (p=2.859e-02),+0.1269 (p=1.672e-01),-0.2951 (p=1.067e-03),-0.1128 (p=2.202e-01),Across-noise paradox (higher noise increases both residual and distortion)

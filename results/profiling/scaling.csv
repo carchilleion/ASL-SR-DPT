@@ -1,0 +1,5 @@
+patch_count,total_solver_time,mean_solver_time_per_patch,mean_iterations,mean_active_ratio
+100,0.6384,0.006384,140.25,0.9998
+250,1.6291,0.006516,138.37,0.9998
+500,3.1152,0.006230,137.71,0.9998
+1000,6.2611,0.006261,137.24,0.9998

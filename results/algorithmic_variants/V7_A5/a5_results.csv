@@ -1,0 +1,4 @@
+prune_thresh,mean_support_size,runtime_ms_patch,psnr,ssim,mse,measurement_residual,coefficient_error,dc_error,ac_error,decision
+0.0001,64.0,3.219,-2.0173,0.4527,1.591223,0.1642,1.7831,0.5424,1.6660,REJECT
+0.001,64.0,3.111,18.4986,0.3539,0.014130,0.6041,0.8412,0.2283,0.7849,PROMISING
+0.01,64.0,2.981,18.4986,0.3539,0.014130,0.6041,0.8412,0.2283,0.7849,PROMISING

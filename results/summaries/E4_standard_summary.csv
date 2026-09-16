@@ -1,0 +1,3 @@
+experiment,noise_sigma,sensing_mode,solver,count,psnr_mean,psnr_std,ssim_mean,ssim_std,mse_mean,mse_std,solve_time_mean,solve_time_std,setup_time_mean,setup_time_std,total_time_mean,iterations_mean,iterations_std,residual_mean,active_support_ratio_mean,failed_line_searches_mean,accepted_steps_mean
+E4,15.0,standard,ASL-SR-DPT-MidpointOFF,1,20.5776,0.0,0.4229,0.0,0.008755,0.0,233.5445,0.0,0.000387,0.0,233.5449,133.34,0.0,0.6242,0.9998,0.0,5014146.0
+E4,15.0,standard,ASL-SR-DPT-MidpointON,1,20.5776,0.0,0.4229,0.0,0.008755,0.0,252.2218,0.0,0.000387,0.0,252.2222,133.34,0.0,0.6242,0.9998,0.0,5014146.0

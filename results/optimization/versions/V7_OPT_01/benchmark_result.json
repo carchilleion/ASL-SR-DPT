@@ -1,0 +1,18 @@
+{
+  "version": "V7_OPT_01",
+  "mean_ms_patch": 3.5865721800364554,
+  "median_ms_patch": 3.5904926999937743,
+  "std_ms_patch": 0.03919424290969024,
+  "min_ms_patch": 3.5302269998937845,
+  "max_ms_patch": 3.6377771999686956,
+  "speedup_vs_prev_best": 0.9769774102146702,
+  "runtime_reduction_pct_vs_prev_best": -2.3565119873417633,
+  "speedup_vs_v7_baseline": 0.9769774102146702,
+  "runtime_reduction_pct_vs_v7_baseline": -2.3565119873417633,
+  "peak_memory_mb": 0.05184173583984375,
+  "overall_psnr_db": 15.422737084368096,
+  "mean_patch_ssim": 0.20620738801895072,
+  "mean_patch_mse": 0.02868971879994713,
+  "decision": "REJECT",
+  "decision_reason": "Improvement (-2.36%) below 3.0% threshold."
+}

@@ -1,0 +1,5 @@
+solver,single_patch_ms,batch_size,batch_ms,vectorization_speedup,notes
+V7_OPT_BASE,2.755,50,1.142,2.41x,Supports vectorized batch continuation
+V7_A6_DC_PRESERVATION,1.926,50,1.857,1.04x,Supports vectorized batch continuation (37 AC measurements)
+OMP,2.782,N/A (1),2.782,1.00x,Strictly sequential greedy atom selection per patch
+LASSO-ADMM,2.525,N/A (1),2.525,1.00x,Single-patch Cholesky backsolve with scalar thresholding

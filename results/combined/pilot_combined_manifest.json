@@ -1,0 +1,53 @@
+{
+  "benchmark_name": "ASL-SR-DPT-PILOT-450-COMBINED",
+  "merge_timestamp": "2026-09-16T20:02:49.988901",
+  "expected_total": 450,
+  "received_total": 0,
+  "missing_total": 450,
+  "duplicate_total": 0,
+  "team_a_count": 0,
+  "team_b_count": 0,
+  "team_a_expected": 225,
+  "team_b_expected": 225,
+  "config_hash": "8cdf250d57dd3979dd5b1edaa297e0ee471568028c9c7571c542b18a09be5d14",
+  "config_consistency": "FAIL",
+  "seed_consistency": "FAIL",
+  "key_uniqueness": "PASS",
+  "overall_integrity": "FAIL",
+  "solvers": [
+    "ASL-SR-DPT",
+    "OMP",
+    "LASSO-ADMM"
+  ],
+  "noise_levels": [
+    15.0,
+    25.0,
+    50.0
+  ],
+  "trials": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "team_a_images": [
+    "test001",
+    "test002",
+    "test003",
+    "test004",
+    "test005"
+  ],
+  "team_b_images": [
+    "test006",
+    "test007",
+    "test008",
+    "test009",
+    "test010"
+  ],
+  "output_files": {
+    "raw_csv": "7eb70257593da06f682a3ddda54a9d260d4fc514f645237f5ca74b08f8da61a6",
+    "summary_csv": "7eb70257593da06f682a3ddda54a9d260d4fc514f645237f5ca74b08f8da61a6",
+    "failures_csv": "22eb9408975d4e8f109273e1e99ed928a7f8b99a32568b5947e6d0237ee2d628"
+  }
+}

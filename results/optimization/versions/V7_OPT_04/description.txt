@@ -1,0 +1,2 @@
+Version: V7_OPT_04
+Change Description: Candidate D: Precompute C-contiguous transpose A_T in __init__

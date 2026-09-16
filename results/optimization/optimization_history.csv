@@ -1,0 +1,8 @@
+version,change,runtime_ms_patch,speedup,runtime_reduction_pct,max_z_difference,max_objective_difference,max_residual_difference,iteration_match,stop_reason_match,psnr,ssim,mse,memory_mb,decision
+V7_OPT_01,Candidate M: Eliminate diagnostic list allocations and per-iteration appends when return_diagnostics=False,3.587,0.977x,-2.36%,1.14e-11,1.99e-08,2.26e-12,TRUE,TRUE,15.42,0.2062,2.868972e-02,0.052,REJECT
+V7_OPT_02,Candidate J: Direct BLAS Euclidean norm computation in stopping condition,3.489,1.004x,+0.42%,1.14e-11,1.99e-08,2.26e-12,TRUE,TRUE,15.42,0.2062,2.868972e-02,0.069,REJECT
+V7_OPT_03,"Candidate C: Full-Support Specialized Fast Path (preallocated mask, dead-copy removal, direct step assignment)",3.315,1.057x,+5.39%,1.14e-11,1.99e-08,2.26e-12,TRUE,TRUE,15.42,0.2062,2.868972e-02,0.069,KEEP
+V7_OPT_04,Candidate D: Precompute C-contiguous transpose A_T in __init__,3.290,1.008x,+0.75%,1.15e-11,1.73e-08,2.27e-12,TRUE,TRUE,15.42,0.2062,2.868972e-02,0.069,REJECT
+V7_OPT_05,Candidate K: Vectorized Exponential Evaluation & Direct C-Method Sum,2.900,1.143x,+12.51%,1.14e-11,1.99e-08,2.26e-12,TRUE,TRUE,15.42,0.2062,2.868972e-02,0.069,KEEP
+V7_OPT_06,Candidate L: Fast primary candidate evaluation in line search,2.877,1.008x,+0.81%,1.14e-11,1.99e-08,2.26e-12,TRUE,TRUE,15.42,0.2062,2.868972e-02,0.069,REJECT
+V7_OPT_07,Candidate H: Batched Solver Evaluation Engine (B=50 micro-batches),0.871,3.329x,+69.96%,1.31e-11,2.31e-12,2.31e-12,TRUE,TRUE,15.42,0.2062,2.868972e-02,1.033,KEEP

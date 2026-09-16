@@ -1,0 +1,10 @@
+{
+  "version": "V7_OPT_04",
+  "max_z_difference": 1.1473877403744837e-11,
+  "max_objective_difference": 1.7297377752356624e-08,
+  "max_residual_difference": 2.2714052860806078e-12,
+  "mismatch_count": 0,
+  "iteration_match": true,
+  "stop_reason_match": true,
+  "equivalence_passed": true
+}

@@ -1,0 +1,3 @@
+Version: V7_OPT_07
+Change Description: Candidate H: Batched Solver Evaluation Engine (B=50 micro-batches)
+Batch Size: 50

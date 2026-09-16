@@ -1,0 +1,50 @@
+{
+  "solver_label": "V7_BEST_CURRENT",
+  "solver_file": "hybrid_sparse_solver_v7_optimized.py",
+  "code_hash": "e2c74fa3f89555f08f392eec5db36d3bd62656ad9b3f6aea52394fa9f7cb5d2e",
+  "num_patches": 500,
+  "num_timing_trials": 10,
+  "timing_stats": {
+    "mean_total_seconds": 0.43814189000986514,
+    "median_total_seconds": 0.4403001500759274,
+    "std_total_seconds": 0.006331653688089821,
+    "min_total_seconds": 0.4290105998516083,
+    "max_total_seconds": 0.44768549990840256,
+    "mean_ms_patch": 0.8762837800197303,
+    "median_ms_patch": 0.8806003001518548,
+    "std_ms_patch": 0.012663307376179642,
+    "min_ms_patch": 0.8580211997032166,
+    "max_ms_patch": 0.8953709998168051,
+    "time_per_iteration_ms": 0.005841891866798202
+  },
+  "time_breakdown_ms_per_patch": {
+    "objective_time_ms": 0.0,
+    "gradient_time_ms": 0.0,
+    "line_search_candidate_time_ms": 0.0,
+    "midpoint_time_ms": 0.0,
+    "support_mask_time_ms": 0.0,
+    "residual_computation_time_ms": 0.0
+  },
+  "operation_counts_500_patches": {
+    "total_iterations": 75000,
+    "mean_iterations_per_patch": 150.0,
+    "total_accepted_steps": 75000,
+    "total_backtracks": 0,
+    "numpy_matvec_ops": 0,
+    "exponential_evaluations": 0,
+    "total_active_coordinates": 4799115,
+    "mean_active_ratio": 0.999815625
+  },
+  "memory_profile": {
+    "peak_memory_kib": 1847.103515625,
+    "current_memory_kib": 1837.3486328125
+  },
+  "numerical_quality": {
+    "mean_objective": -5.7627696059459845,
+    "mean_residual": 0.7252984767516611,
+    "mean_patch_mse": 0.02868971879994713,
+    "mean_patch_psnr_db": 16.32568096901963,
+    "overall_psnr_db": 15.422737084368096,
+    "mean_patch_ssim": 0.20620738801895072
+  }
+}

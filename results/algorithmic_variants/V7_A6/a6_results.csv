@@ -1,0 +1,11 @@
+metric,Standard_Sensing,DC_Preserving_Sensing,difference,decision
+runtime_ms_patch,3.002,1.969,-1.033,—
+speedup,1.000x,1.525x,+0.525x,—
+PSNR,15.4227,18.8464,+3.4237,—
+SSIM,0.2062,0.3157,+0.1095,—
+MSE,0.028690,0.013042,-0.015647,—
+measurement_residual,0.7253,0.6483,-0.0770,—
+coefficient_error,1.2938,0.8028,-0.4910,—
+dc_error,0.6735,0.0902,-0.5833,—
+ac_error,1.0345,0.7723,-0.2622,—
+iterations,150.0,97.8,-52.2,PROMISING_ARCH

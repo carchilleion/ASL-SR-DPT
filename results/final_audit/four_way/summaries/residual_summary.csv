@@ -1,0 +1,4 @@
+noise_sigma,sigma_normalized,theoretical_noise_norm,empirical_noise_norm,A6_measurement_residual,A6_residual_to_noise_ratio,interpretation
+15.0,0.058824,0.3578,0.3431,0.5163,1.5046,Discrepancy noted
+25.0,0.098039,0.5963,0.5639,0.6859,1.2162,Discrepancy noted
+50.0,0.196078,1.1927,1.0559,1.0786,1.0215,Residual matches projected noise scale within 2.2%

@@ -1,0 +1,3 @@
+configuration,runtime_seconds,objective_evaluations,midpoint_evaluations,backtracking_attempts,accepted_steps,failed_line_searches,iterations,mean_residual,psnr,ssim,mse,midpoint_overhead_pct,midpoint_eval_fraction,midpoint_acceptance_rate
+Midpoint_ON,3.5203,141352,3500,68997,68855,0,68855,0.650726,7.3249,0.0081,0.185143,-1.85,2.48,4.88
+Midpoint_OFF,3.5866,141210,0,72355,68855,0,68855,0.650726,7.3249,0.0081,0.185143,0.00,0.00,0.00

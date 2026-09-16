@@ -1,0 +1,2 @@
+version,solver_file,code_hash,runtime_seconds,mean_ms_patch,median_ms_patch,std_ms_patch,iterations,objective,residual,active_ratio,psnr,ssim,mse,peak_memory_kib
+V7_BEST_CURRENT,hybrid_sparse_solver_v7_optimized.py,e2c74fa3f89555f08f392eec5db36d3bd62656ad9b3f6aea52394fa9f7cb5d2e,0.4381,0.876,0.881,0.013,150.00,-5.762770,0.725298,0.9998,15.42,0.2062,2.868972e-02,1847.10

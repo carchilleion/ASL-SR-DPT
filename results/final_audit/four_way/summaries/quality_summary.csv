@@ -1,0 +1,5 @@
+solver,mean_psnr,std_psnr,min_psnr,max_psnr,mean_ssim,std_ssim,min_ssim,max_ssim,best_psnr_count_out_of_30,best_ssim_count_out_of_30,lowest_mse_count_out_of_30
+V7_OPT_BASE,21.2157,2.4031,16.5744,26.0069,0.5026,0.1050,0.3479,0.7046,0,0,0
+V7_A6_DC_PRESERVATION,24.0014,2.2549,20.7894,29.3699,0.6075,0.1157,0.4198,0.8187,20,23,20
+OMP,21.8224,3.5654,17.0743,27.1530,0.4479,0.1783,0.1493,0.7309,10,1,10
+LASSO-ADMM,18.2117,3.3333,12.5455,24.4539,0.4599,0.1765,0.1580,0.7352,0,6,0

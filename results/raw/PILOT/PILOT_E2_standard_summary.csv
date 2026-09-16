@@ -1,0 +1,4 @@
+experiment,noise_sigma,sensing_mode,solver,count,psnr_mean,psnr_std,ssim_mean,ssim_std,mse_mean,mse_std,solve_time_mean,solve_time_std,setup_time_mean,setup_time_std,total_time_mean,iterations_mean,iterations_std,residual_mean,active_support_ratio_mean,failed_line_searches_mean,accepted_steps_mean,speedup_vs_LASSO-ADMM,latency_reduction_pct_vs_LASSO-ADMM,speedup_vs_OMP,latency_reduction_pct_vs_OMP,speedup_vs_asl
+E2,15.0,standard,ASL-SR-DPT,1,20.5776,0.0,0.4229,0.0,0.008755,0.0,755.5584,0.0,0.00056,0.0,755.559,133.34,0.0,0.6242,0.9998,0.0,5014146.0,0.137,-631.42,0.152,-558.04,
+E2,15.0,standard,LASSO-ADMM,1,20.415,0.0,0.7269,0.0,0.009089,0.0,103.2997,0.0,0.000154,0.0,103.2999,99.89,0.0,0.0007,0.5431,0.0,3756092.0,,,,,7.314
+E2,15.0,standard,OMP,1,24.1876,0.0,0.7172,0.0,0.003813,0.0,114.8198,0.0,2.2e-05,0.0,114.8198,37.91,0.0,0.0,0.5923,0.0,1425486.0,,,,,6.58

@@ -1,0 +1,54 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Environments
+venv/
+.venv/
+ENV/
+env/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Pytest / Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# External large dataset directory (pilot uses data/BSD68)
+denoising_datasets/
+
+# Transient team raw data files (preserves folder structure)
+results/team_a/raw/*
+!results/team_a/raw/.gitkeep
+results/team_a/failures/*
+!results/team_a/failures/.gitkeep
+results/team_a/logs/*
+!results/team_a/logs/.gitkeep
+results/team_a/summaries/*
+!results/team_a/summaries/.gitkeep
+results/team_a/reconstructions/*
+!results/team_a/reconstructions/.gitkeep
+
+results/team_b/raw/*
+!results/team_b/raw/.gitkeep
+results/team_b/failures/*
+!results/team_b/failures/.gitkeep
+results/team_b/logs/*
+!results/team_b/logs/.gitkeep
+results/team_b/summaries/*
+!results/team_b/summaries/.gitkeep
+results/team_b/reconstructions/*
+!results/team_b/reconstructions/.gitkeep
+
+# Merged output directory
+results/pilot_combined/*
+!results/pilot_combined/.gitkeep

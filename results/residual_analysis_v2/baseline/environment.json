@@ -1,0 +1,30 @@
+{
+  "label": "A6_FROZEN_BASELINE",
+  "timestamp": "2026-09-08T17:03:00",
+  "file_sha256_hashes": {
+    "code/hybrid_sparse_solver_v7_fixed.py": "c6ccd84eeb8f00f389bc7c6234e354df4fac735739a5cabfcc00530357d7eeb1",
+    "code/hybrid_sparse_solver_v7_optimized.py": "e2c74fa3f89555f08f392eec5db36d3bd62656ad9b3f6aea52394fa9f7cb5d2e",
+    "code/sensing.py": "b145f8a644d385cc23e28450ea743473a2af81e3b465c999c753c7f4ac948a54",
+    "code/reconstruction.py": "87f706f6486c6bf0f91ab3dc9fd7c744f977ca7baab72ddb0aa09e4a2cbc5a12",
+    "code/metrics.py": "eaf8806c3c6ba80122f74b08ca51dc270195e867ced4dd96f40650320baa7324",
+    "code/benchmark_runner.py": "6ed0c590e00dbe74fea766ca55f776b4fe9581f21ae596db04ba76d7501a1c36",
+    "configs/final_config.json": "d3619add2942fe04ea5eefccfd7c5570b2eae6a9156eec823acf0522b3c4346f"
+  },
+  "python_version": "3.12.9 (tags/v3.12.9:fdb8142, Feb  4 2025, 15:27:58) [MSC v.1942 64 bit (AMD64)]",
+  "numpy_version": "2.4.3",
+  "scipy_version": "1.15.3",
+  "pillow_version": "12.1.1",
+  "os": "Windows-11-10.0.26200-SP0",
+  "system": "Windows",
+  "release": "11",
+  "machine": "AMD64",
+  "processor": "Intel64 Family 6 Model 183 Stepping 1, GenuineIntel",
+  "cpu_count": 16,
+  "threads": {
+    "OMP_NUM_THREADS": "unset",
+    "OPENBLAS_NUM_THREADS": "unset",
+    "MKL_NUM_THREADS": "unset",
+    "NUMEXPR_NUM_THREADS": "unset",
+    "VECLIB_MAXIMUM_THREADS": "unset"
+  }
+}

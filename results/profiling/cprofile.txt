@@ -1,0 +1,66 @@
+         5939288 function calls in 5.200 seconds
+
+   Ordered by: cumulative time
+   List reduced from 46 to 25 due to restriction <25>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+      500    0.900    0.002    5.200    0.010 C:\Users\Carlo Mendoza\OneDrive\Desktop\ASL-SR-DPT\code\hybrid_sparse_solver_v7_fixed.py:97(denoise_patch)
+   141352    0.940    0.000    2.094    0.000 C:\Users\Carlo Mendoza\OneDrive\Desktop\ASL-SR-DPT\code\hybrid_sparse_solver_v7_fixed.py:55(_calc_objective)
+    68855    0.853    0.000    1.375    0.000 C:\Users\Carlo Mendoza\OneDrive\Desktop\ASL-SR-DPT\code\hybrid_sparse_solver_v7_fixed.py:73(_calc_gradient)
+   210707    0.458    0.000    1.036    0.000 C:\Users\Carlo Mendoza\OneDrive\Desktop\ASL-SR-DPT\code\hybrid_sparse_solver_v7_fixed.py:45(_validate_inputs)
+   348417    0.258    0.000    0.640    0.000 C:\Users\Carlo Mendoza\AppData\Local\Programs\Python\Python312\Lib\site-packages\numpy\_core\fromnumeric.py:86(_wrapreduction_any_all)
+   279562    0.119    0.000    0.628    0.000 C:\Users\Carlo Mendoza\AppData\Local\Programs\Python\Python312\Lib\site-packages\numpy\_core\fromnumeric.py:2548(all)
+   491269    0.485    0.000    0.485    0.000 {method 'reduce' of 'numpy.ufunc' objects}
+   141852    0.102    0.000    0.408    0.000 C:\Users\Carlo Mendoza\AppData\Local\Programs\Python\Python312\Lib\site-packages\numpy\_core\fromnumeric.py:2304(sum)
+   138210    0.189    0.000    0.383    0.000 C:\Users\Carlo Mendoza\AppData\Local\Programs\Python\Python312\Lib\site-packages\numpy\linalg\_linalg.py:2598(norm)
+   142352    0.117    0.000    0.287    0.000 C:\Users\Carlo Mendoza\AppData\Local\Programs\Python\Python312\Lib\site-packages\numpy\_core\fromnumeric.py:66(_wrapreduction)
+    68855    0.031    0.000    0.162    0.000 C:\Users\Carlo Mendoza\AppData\Local\Programs\Python\Python312\Lib\site-packages\numpy\_core\fromnumeric.py:2436(any)
+   627979    0.087    0.000    0.087    0.000 {built-in method numpy.asarray}
+   138210    0.087    0.000    0.087    0.000 {method 'dot' of 'numpy.ndarray' objects}
+   210207    0.073    0.000    0.073    0.000 {method 'copy' of 'numpy.ndarray' objects}
+   490769    0.069    0.000    0.069    0.000 {method 'items' of 'dict' objects}
+   210707    0.061    0.000    0.061    0.000 {method 'reshape' of 'numpy.ndarray' objects}
+   344275    0.055    0.000    0.055    0.000 {method 'append' of 'list' objects}
+    23120    0.036    0.000    0.047    0.000 C:\Users\Carlo Mendoza\AppData\Local\Programs\Python\Python312\Lib\site-packages\numpy\_core\numeric.py:170(ones)
+   138210    0.030    0.000    0.043    0.000 C:\Users\Carlo Mendoza\AppData\Local\Programs\Python\Python312\Lib\site-packages\numpy\linalg\_linalg.py:169(isComplexType)
+   138210    0.033    0.000    0.033    0.000 {method 'ravel' of 'numpy.ndarray' objects}
+    68855    0.019    0.000    0.032    0.000 C:\Users\Carlo Mendoza\AppData\Local\Programs\Python\Python312\Lib\site-packages\numpy\_core\numeric.py:483(count_nonzero)
+   276920    0.029    0.000    0.029    0.000 {built-in method builtins.issubclass}
+   279562    0.028    0.000    0.028    0.000 C:\Users\Carlo Mendoza\AppData\Local\Programs\Python\Python312\Lib\site-packages\numpy\_core\fromnumeric.py:2543(_all_dispatcher)
+   210207    0.022    0.000    0.022    0.000 C:\Users\Carlo Mendoza\AppData\Local\Programs\Python\Python312\Lib\site-packages\numpy\_core\multiarray.py:748(dot)
+   142852    0.021    0.000    0.021    0.000 {built-in method builtins.isinstance}
+
+
+         5939288 function calls in 5.200 seconds
+
+   Ordered by: internal time
+   List reduced from 46 to 25 due to restriction <25>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+   141352    0.940    0.000    2.094    0.000 C:\Users\Carlo Mendoza\OneDrive\Desktop\ASL-SR-DPT\code\hybrid_sparse_solver_v7_fixed.py:55(_calc_objective)
+      500    0.900    0.002    5.200    0.010 C:\Users\Carlo Mendoza\OneDrive\Desktop\ASL-SR-DPT\code\hybrid_sparse_solver_v7_fixed.py:97(denoise_patch)
+    68855    0.853    0.000    1.375    0.000 C:\Users\Carlo Mendoza\OneDrive\Desktop\ASL-SR-DPT\code\hybrid_sparse_solver_v7_fixed.py:73(_calc_gradient)
+   491269    0.485    0.000    0.485    0.000 {method 'reduce' of 'numpy.ufunc' objects}
+   210707    0.458    0.000    1.036    0.000 C:\Users\Carlo Mendoza\OneDrive\Desktop\ASL-SR-DPT\code\hybrid_sparse_solver_v7_fixed.py:45(_validate_inputs)
+   348417    0.258    0.000    0.640    0.000 C:\Users\Carlo Mendoza\AppData\Local\Programs\Python\Python312\Lib\site-packages\numpy\_core\fromnumeric.py:86(_wrapreduction_any_all)
+   138210    0.189    0.000    0.383    0.000 C:\Users\Carlo Mendoza\AppData\Local\Programs\Python\Python312\Lib\site-packages\numpy\linalg\_linalg.py:2598(norm)
+   279562    0.119    0.000    0.628    0.000 C:\Users\Carlo Mendoza\AppData\Local\Programs\Python\Python312\Lib\site-packages\numpy\_core\fromnumeric.py:2548(all)
+   142352    0.117    0.000    0.287    0.000 C:\Users\Carlo Mendoza\AppData\Local\Programs\Python\Python312\Lib\site-packages\numpy\_core\fromnumeric.py:66(_wrapreduction)
+   141852    0.102    0.000    0.408    0.000 C:\Users\Carlo Mendoza\AppData\Local\Programs\Python\Python312\Lib\site-packages\numpy\_core\fromnumeric.py:2304(sum)
+   627979    0.087    0.000    0.087    0.000 {built-in method numpy.asarray}
+   138210    0.087    0.000    0.087    0.000 {method 'dot' of 'numpy.ndarray' objects}
+   210207    0.073    0.000    0.073    0.000 {method 'copy' of 'numpy.ndarray' objects}
+   490769    0.069    0.000    0.069    0.000 {method 'items' of 'dict' objects}
+   210707    0.061    0.000    0.061    0.000 {method 'reshape' of 'numpy.ndarray' objects}
+   344275    0.055    0.000    0.055    0.000 {method 'append' of 'list' objects}
+    23120    0.036    0.000    0.047    0.000 C:\Users\Carlo Mendoza\AppData\Local\Programs\Python\Python312\Lib\site-packages\numpy\_core\numeric.py:170(ones)
+   138210    0.033    0.000    0.033    0.000 {method 'ravel' of 'numpy.ndarray' objects}
+    68855    0.031    0.000    0.162    0.000 C:\Users\Carlo Mendoza\AppData\Local\Programs\Python\Python312\Lib\site-packages\numpy\_core\fromnumeric.py:2436(any)
+   138210    0.030    0.000    0.043    0.000 C:\Users\Carlo Mendoza\AppData\Local\Programs\Python\Python312\Lib\site-packages\numpy\linalg\_linalg.py:169(isComplexType)
+   276920    0.029    0.000    0.029    0.000 {built-in method builtins.issubclass}
+   279562    0.028    0.000    0.028    0.000 C:\Users\Carlo Mendoza\AppData\Local\Programs\Python\Python312\Lib\site-packages\numpy\_core\fromnumeric.py:2543(_all_dispatcher)
+   210207    0.022    0.000    0.022    0.000 C:\Users\Carlo Mendoza\AppData\Local\Programs\Python\Python312\Lib\site-packages\numpy\_core\multiarray.py:748(dot)
+   142852    0.021    0.000    0.021    0.000 {built-in method builtins.isinstance}
+    68855    0.019    0.000    0.032    0.000 C:\Users\Carlo Mendoza\AppData\Local\Programs\Python\Python312\Lib\site-packages\numpy\_core\numeric.py:483(count_nonzero)
+
+

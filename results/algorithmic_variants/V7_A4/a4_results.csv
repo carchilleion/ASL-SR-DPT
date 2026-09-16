@@ -1,0 +1,4 @@
+sigma_decay,iterations,runtime_ms_patch,speedup,final_sigma,psnr,ssim,mse,measurement_residual,decision
+0.9,150.0,3.006,0.999x,0.0100,9.4482,0.1691,0.113547,0.9019,REJECT
+0.95,150.0,2.958,1.015x,0.0100,15.4227,0.2062,0.028690,0.7253,NEUTRAL
+0.98,150.0,2.789,1.076x,0.3378,11.8613,0.2859,0.065143,0.4709,REJECT

@@ -1,0 +1,4 @@
+trial,image_id,noise_sigma,sensing_mode,solver,psnr,ssim,mse,solve_time,setup_time,iterations,mean_iterations_per_patch,mean_active_support_count,final_sigma,residual,active_support_ratio,failed_line_searches,accepted_steps,seed,code_version,patch_count,run_id,experiment
+1,test001,15.0,standard,ASL-SR-DPT,20.5776,0.4229,0.008755,236.6769,0.000493,133.34,133.34,63.99,0.01,0.6242,0.9998,0,5014146,20270908,v7.0.0-fixed,37604,E2_1_test001_15.0_ASL-SR-DPT_5485c7,E2
+1,test001,15.0,standard,OMP,24.1876,0.7172,0.003813,101.3983,2e-05,37.91,37.91,37.91,0.0,0.0,0.5923,0,1425486,20270908,v7.0.0-fixed,37604,E2_1_test001_15.0_OMP_c87f25,E2
+1,test001,15.0,standard,LASSO-ADMM,20.415,0.7269,0.009089,94.455,0.000149,99.89,99.89,34.76,0.0,0.0007,0.5431,0,3756092,20270908,v7.0.0-fixed,37604,E2_1_test001_15.0_LASSO-ADMM_be0357,E2
