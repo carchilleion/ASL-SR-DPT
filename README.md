@@ -27,8 +27,8 @@ The 450-evaluation pilot benchmark is split into two **strictly non-overlapping*
 ### Key Protocol Guarantees:
 - **Zero Overlapping Keys:** Teammates process mutually disjoint image sets. No patches are split; full images are reconstructed end-to-end.
 - **Deterministic Reproducibility:** Seeds for sensing matrices and noise realizations are strictly computed from the experiment key:
-  - $\text{sensing\_seed} = \text{base\_seed} + \text{trial}$
-  - $\text{noise\_seed} = \text{base\_seed} + \text{trial} \times 100000 + \sigma \times 1000 + \text{clean\_id}$
+  - $$\text{sensing\_seed} = \text{base\_seed} + \text{trial}$$
+  - $$\text{noise\_seed} = \text{base\_seed} + \text{trial} \times 100000 + \sigma \times 1000 + \text{clean\_id}$$
 - **Bitwise Noise Parity:** In every condition $(image, \sigma, trial)$, all 3 solvers operate on the bitwise identical noisy image.
 - **Resume Safety:** If interrupted, the app skips already completed keys loaded from CSV.
 - **Strict Single-Threading:** CPU libraries are pinned to 1 thread (`OMP_NUM_THREADS=1`, `MKL_NUM_THREADS=1`, etc.) to guarantee fair, isolated per-patch runtime measurements.
