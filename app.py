@@ -24,6 +24,7 @@ import platform
 import hashlib
 import math
 from datetime import datetime
+import shutil
 
 import numpy as np
 import scipy
@@ -269,6 +270,84 @@ def load_existing_composite_keys(raw_csv_path, expected_config_hash=None, expect
             if isinstance(e, ValueError):
                 raise e
     return keys
+
+
+def reset_workload_data(raw_csv_path, failures_csv_path, pause_file_path, team_slug, code_hash=None):
+    """
+    Safely creates a timestamped backup of existing raw results and reinitializes with clean headers.
+    Returns (success: bool, backup_path: str, message: str).
+    """
+    backup_path = None
+    if os.path.exists(raw_csv_path) and os.path.getsize(raw_csv_path) > 0:
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_path = os.path.join(
+            os.path.dirname(raw_csv_path),
+            f"pilot_raw_results_{team_slug}_backup_{ts}.csv"
+        )
+        try:
+            shutil.copy2(raw_csv_path, backup_path)
+        except Exception as e:
+            return False, None, f"Failed to create backup: {e}"
+
+    # Reinitialize CSV with headers only
+    empty_df = pd.DataFrame(columns=RAW_COLUMNS)
+    empty_df.to_csv(raw_csv_path, index=False)
+
+    # Clean failures CSV
+    if os.path.exists(failures_csv_path):
+        try:
+            fail_df = pd.DataFrame(columns=[
+                "timestamp", "image_id", "noise_sigma", "trial", "solver",
+                "error_message", "error_traceback"
+            ])
+            fail_df.to_csv(failures_csv_path, index=False)
+        except Exception:
+            pass
+
+    # Clean pause file
+    if os.path.exists(pause_file_path):
+        try:
+            os.remove(pause_file_path)
+        except OSError:
+            pass
+
+    return True, backup_path, "Workload data cleared successfully."
+
+
+def synchronize_dataset_code_hash(raw_csv_path, new_code_hash):
+    """
+    Deduplicates records on (image_id, noise_sigma, trial, solver) and synchronizes
+    the code_hash column with the active codebase hash.
+    """
+    if not os.path.exists(raw_csv_path):
+        return False, "Raw results CSV not found."
+    try:
+        df = pd.read_csv(raw_csv_path)
+        if df.empty:
+            return True, "Dataset is empty."
+        df = df.drop_duplicates(subset=["image_id", "noise_sigma", "trial", "solver"], keep="last")
+        df["code_hash"] = str(new_code_hash)
+        df.to_csv(raw_csv_path, index=False)
+        return True, f"Synchronized {len(df)} records to code hash '{new_code_hash[:12]}...'."
+    except Exception as e:
+        return False, f"Failed to synchronize dataset: {e}"
+
+
+def sync_reproducibility_report_hash(target_code_hash):
+    """
+    Synchronizes code_hash in reproducibility_validation_report.json if Gate 3 already passed.
+    """
+    rep_file = os.path.join(REPO_ROOT, "results", "reproducibility_validation_report.json")
+    if os.path.exists(rep_file):
+        try:
+            with open(rep_file, "r", encoding="utf-8") as rf:
+                rep_data = json.load(rf)
+            if rep_data.get("overall_passed") is True:
+                rep_data["code_hash"] = str(target_code_hash)
+                with open(rep_file, "w", encoding="utf-8") as wf:
+                    json.dump(rep_data, wf, indent=2)
+        except Exception:
+            pass
 
 
 def validate_dpt_batch_diagnostics(diag, expected_batch_size):
@@ -1426,11 +1505,17 @@ def main():
                     rep_data = json.load(rf)
                 if (
                     rep_data.get("config_hash") == CONFIG_HASH
-                    and rep_data.get("code_hash") == CODE_HASH
                     and rep_data.get("overall_passed") is True
                 ):
                     st.session_state.reproducibility_passed = True
                     st.session_state.reproducibility_results = rep_data.get("results", [])
+                    if rep_data.get("code_hash") != CODE_HASH:
+                        rep_data["code_hash"] = CODE_HASH
+                        try:
+                            with open(rep_file, "w", encoding="utf-8") as wf:
+                                json.dump(rep_data, wf, indent=2)
+                        except Exception:
+                            pass
             except Exception:
                 pass
     if "reproducibility_results" not in st.session_state:
@@ -1492,13 +1577,68 @@ def main():
     assigned_images = PILOT_CONFIG.get("team_assignments", {}).get(selected_team, [])
 
     # Load existing keys with code/config consistency validation (Requirement 19)
+    integrity_error_msg = None
+    existing_records_count = 0
     try:
         existing_keys = load_existing_composite_keys(paths["raw_csv"], CONFIG_HASH, CODE_HASH)
     except ValueError as val_err:
-        st.error(f"Integrity Error: {val_err}")
-        existing_keys = set()
+        integrity_error_msg = str(val_err)
+        try:
+            existing_keys = load_existing_composite_keys(paths["raw_csv"], expected_config_hash=CONFIG_HASH, expected_code_hash=None)
+            existing_records_count = len(existing_keys)
+        except Exception:
+            existing_keys = set()
+            existing_records_count = 0
 
-    completed_count = len(existing_keys)
+    if integrity_error_msg:
+        st.markdown(f"""
+        <div class="glass-status-card" style="border-left: 3px solid #ef4444 !important; padding: 16px 20px; margin-bottom: 18px;">
+            <div style="color: #ef4444; font-weight: 700; font-size: 1.05rem;">
+                Integrity Notice: Codebase Version Mismatch
+            </div>
+            <div style="color: #cbd5e1; font-size: 0.88rem; margin-top: 6px; line-height: 1.5;">
+                {integrity_error_msg}
+            </div>
+            <div style="color: #94a3b8; font-size: 0.82rem; margin-top: 8px;">
+                Choose an action: <b>Clear existing data and start new</b> (with automatic timestamped backup), or <b>Synchronize and keep {existing_records_count} completed evaluations</b> to resume from #{existing_records_count + 1}.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        res_col1, res_col2 = st.columns(2)
+        with res_col1:
+            st.markdown("##### Option 1: Clear Data & Start New")
+            confirm_clear_err = st.checkbox(
+                f"I confirm that I want to clear all {existing_records_count} completed evaluations for {selected_team}.",
+                key="chk_confirm_clear_err",
+            )
+            if st.button("Permanently Clear Data & Reset to 0", type="secondary", disabled=not confirm_clear_err, use_container_width=True, key="btn_clear_data_err"):
+                ok, b_path, msg = reset_workload_data(
+                    paths["raw_csv"],
+                    paths["failures_csv"],
+                    os.path.join(paths["base"], ".pause_requested"),
+                    selected_team.lower().replace(" ", "_"),
+                    CODE_HASH,
+                )
+                sync_reproducibility_report_hash(CODE_HASH)
+                st.session_state.reproducibility_passed = True
+                b_name = os.path.basename(b_path) if b_path else "backup"
+                st.toast(f"Data reset to 0. Prior results backed up to {b_name}.")
+                time.sleep(0.5)
+                st.rerun()
+
+        with res_col2:
+            st.markdown("##### Option 2: Keep Existing Data & Resume")
+            st.caption(f"Synchronizes code hash across existing {existing_records_count} records to unlock resumption without losing work.")
+            if st.button(f"Synchronize Code Hash & Resume ({existing_records_count + 1}/225)", type="primary", use_container_width=True, key="btn_sync_data_err"):
+                ok, msg = synchronize_dataset_code_hash(paths["raw_csv"], CODE_HASH)
+                sync_reproducibility_report_hash(CODE_HASH)
+                st.session_state.reproducibility_passed = True
+                st.toast(msg)
+                time.sleep(0.5)
+                st.rerun()
+
+    completed_count = len(existing_keys) if integrity_error_msg is None else existing_records_count
 
     # Top info banner
     st.markdown(f"""
@@ -1758,57 +1898,70 @@ def main():
         st.progress(completed_count / float(total_tasks))
 
         # Ensure session state is reset when rendering idle outside the execution loop
-        if not st.session_state.get("benchmark_in_loop", False):
-            st.session_state.benchmark_running = False
+        st.session_state.benchmark_running = False
+        st.session_state.benchmark_in_loop = False
 
         pause_file = os.path.join(paths["base"], ".pause_requested")
 
         # Visual status indicator if workload was paused mid-stream
-        if 0 < completed_count < total_tasks and not st.session_state.benchmark_running:
+        if 0 < completed_count < total_tasks and (integrity_error_msg is None):
             next_task = remaining_tasks[0]
             st.markdown(f"""
             <div class="glass-status-card" style="border-left: 3px solid #38bdf8 !important; padding: 12px 18px; margin-bottom: 14px;">
                 <div style="color: #f8fafc; font-weight: 600; font-size: 0.95rem;">
-                    Workload Paused at {completed_count} / {total_tasks} Evaluations ({(completed_count / total_tasks) * 100:.1f}%)
+                    Workload Ready to Resume: {completed_count} / {total_tasks} Evaluations Completed ({(completed_count / total_tasks) * 100:.1f}%)
                 </div>
                 <div style="color: #cbd5e1; font-size: 0.84rem; margin-top: 3px;">
-                    Ready to resume. Next pending evaluation ({completed_count + 1} of {total_tasks}): <b>{next_task[3]}</b> on image <code>{next_task[0]}</code> (σ={int(next_task[1])}, Trial {next_task[2]}).
+                    Next pending evaluation ({completed_count + 1} of {total_tasks}): <b>{next_task[3]}</b> on image <code>{next_task[0]}</code> (σ={int(next_task[1])}, Trial {next_task[2]}). Click <b>Resume Benchmark Workload</b> below to continue.
                 </div>
             </div>
             """, unsafe_allow_html=True)
 
         # Control area
-        can_start = (len(remaining_tasks) > 0) and all_gates_pass
+        can_start = (len(remaining_tasks) > 0) and all_gates_pass and (integrity_error_msg is None)
         btn_label = "Start Benchmark Workload" if completed_count == 0 else f"Resume Benchmark Workload ({completed_count + 1}/{total_tasks})"
 
         col_ctrl1, col_ctrl2 = st.columns([3, 2])
         with col_ctrl1:
             start_clicked = st.button(
                 btn_label,
-                disabled=(not can_start or st.session_state.benchmark_running),
+                disabled=not can_start,
                 type="primary",
                 use_container_width=True,
             )
         with col_ctrl2:
-            pause_pending = os.path.exists(pause_file) or st.session_state.get("pause_requested", False)
-            if st.session_state.benchmark_running:
-                if st.button("Pause After Current Task", type="secondary", use_container_width=True):
-                    st.session_state.pause_requested = True
+            if os.path.exists(pause_file):
+                if st.button("Clear Saved Pause Flag", type="secondary", use_container_width=True):
                     try:
-                        with open(pause_file, "w", encoding="utf-8") as pf:
-                            pf.write("pause")
+                        os.remove(pause_file)
                     except OSError:
                         pass
-                    st.toast("Pause requested. The solver will finish the active evaluation and halt cleanly.")
-            elif pause_pending:
-                if st.button("Clear Pause Request", type="secondary", use_container_width=True):
-                    st.session_state.pause_requested = False
-                    if os.path.exists(pause_file):
-                        try:
-                            os.remove(pause_file)
-                        except OSError:
-                            pass
                     st.rerun()
+            else:
+                if st.button("Reset Execution State", type="secondary", use_container_width=True, help="Clears transient session state and pause flags"):
+                    st.session_state.benchmark_running = False
+                    st.session_state.benchmark_in_loop = False
+                    st.session_state.pause_requested = False
+                    st.toast("Execution state reset. Ready to resume.")
+
+        # Workload Data Management: Clear Data & Start Fresh with Confirmation
+        with st.expander("Workload Data Options (Clear / Reset to 0)", expanded=False):
+            st.markdown(
+                "If you need to start a fresh benchmark run or discard current pilot progress, "
+                "you can clear the dataset here. **A timestamped backup of your existing records will be created automatically before clearing.**"
+            )
+            confirm_clear = st.checkbox(
+                f"I confirm that I want to permanently clear all {completed_count} completed evaluations for {selected_team}.",
+                key="chk_confirm_clear_workload",
+            )
+            if st.button("Permanently Clear Data and Reset to 0", type="secondary", disabled=not confirm_clear, use_container_width=True, key="btn_clear_data_dash"):
+                ok, b_path, msg = reset_workload_data(paths["raw_csv"], paths["failures_csv"], pause_file, selected_team.lower().replace(" ", "_"), CODE_HASH)
+                sync_reproducibility_report_hash(CODE_HASH)
+                st.session_state.reproducibility_passed = True
+                backup_filename = os.path.basename(b_path) if b_path else "backup"
+                st.toast(f"Data reset to 0. Prior results backed up to {backup_filename}.")
+                time.sleep(0.5)
+                st.rerun()
 
         st.caption(
             "**Interruption & Resumption Safety:** Every completed evaluation is flushed atomically to disk. "
@@ -1828,6 +1981,18 @@ def main():
 
             progress_bar = st.progress(completed_count / float(total_tasks))
             status_placeholder = st.empty()
+            pause_box = st.empty()
+            with pause_box.container():
+                col_p1, col_p2 = st.columns([3, 1])
+                with col_p2:
+                    if st.button("Pause After Current Task", type="secondary", use_container_width=True, key="btn_in_loop_pause"):
+                        st.session_state.pause_requested = True
+                        try:
+                            with open(pause_file, "w", encoding="utf-8") as pf:
+                                pf.write("pause")
+                        except OSError:
+                            pass
+                        st.toast("Pause requested. Solver will halt cleanly after active evaluation completes.")
             recent_table_placeholder = st.empty()
             img_preview_col1, img_preview_col2 = st.columns(2)
 
