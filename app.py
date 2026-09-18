@@ -1150,11 +1150,9 @@ def main():
     # Glass Minimalism styling
     st.markdown("""
         <style>
-            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
-
-            /* Typography: Base font on root application container */
-            .stApp {
-                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            /* Base typography: Use native system font stack for maximum crispness and zero layout shift */
+            .stApp, .main-title, .sub-title, .workload-bar, .glass-panel, .glass-status-card {
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             }
 
             /* Strictly preserve Material Symbols and Streamlit icon fonts */
@@ -1179,19 +1177,20 @@ def main():
 
             /* Header Typography */
             .main-title {
-                font-size: 1.95rem;
+                font-size: 2.05rem;
                 font-weight: 700;
                 letter-spacing: -0.035em;
-                color: var(--text-color, #0f172a);
-                margin-bottom: 0.2rem;
+                color: #f8fafc;
+                margin-bottom: 0.25rem;
+                line-height: 1.25;
             }
             .sub-title {
-                font-size: 0.92rem;
+                font-size: 0.95rem;
                 font-weight: 400;
                 letter-spacing: -0.01em;
                 color: #94a3b8;
                 margin-bottom: 1.5rem;
-                line-height: 1.4;
+                line-height: 1.45;
             }
 
             /* Frosted Glass Workload Bar */
@@ -1199,15 +1198,15 @@ def main():
                 display: flex;
                 flex-wrap: wrap;
                 align-items: center;
-                gap: 18px;
-                background: rgba(128, 128, 128, 0.05);
+                gap: 20px;
+                background: rgba(255, 255, 255, 0.04);
                 backdrop-filter: blur(16px) saturate(180%);
                 -webkit-backdrop-filter: blur(16px) saturate(180%);
-                border: 1px solid rgba(128, 128, 128, 0.2);
+                border: 1px solid rgba(255, 255, 255, 0.08);
                 border-radius: 12px;
-                padding: 14px 20px;
+                padding: 14px 22px;
                 margin-bottom: 22px;
-                box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+                box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.2);
             }
             .workload-col {
                 display: flex;
@@ -1215,142 +1214,188 @@ def main():
                 gap: 3px;
             }
             .workload-label {
-                font-size: 0.7rem;
+                font-size: 0.72rem;
                 font-weight: 600;
                 text-transform: uppercase;
-                letter-spacing: 0.06em;
+                letter-spacing: 0.07em;
                 color: #94a3b8;
             }
             .workload-value {
-                font-size: 0.88rem;
+                font-size: 0.92rem;
                 font-weight: 600;
-                color: var(--text-color, #1e293b);
+                color: #f8fafc;
             }
             .workload-divider {
                 height: 30px;
                 width: 1px;
-                background: rgba(128, 128, 128, 0.2);
+                background: rgba(255, 255, 255, 0.1);
             }
 
             /* Glass Pill Badges */
             .glass-pill {
                 display: inline-flex;
                 align-items: center;
-                padding: 2px 9px;
+                padding: 3px 12px;
                 border-radius: 6px;
-                font-size: 0.78rem;
+                font-size: 0.8rem;
                 font-weight: 600;
-                letter-spacing: 0.02em;
-                background: rgba(37, 99, 235, 0.12);
-                color: #3b82f6;
-                border: 1px solid rgba(37, 99, 235, 0.25);
+                letter-spacing: 0.03em;
+                background: rgba(59, 130, 246, 0.2);
+                color: #60a5fa;
+                border: 1px solid rgba(59, 130, 246, 0.4);
             }
 
             /* Sidebar Glass Panel */
             .glass-panel {
-                background: rgba(128, 128, 128, 0.05);
+                background: rgba(255, 255, 255, 0.04);
                 backdrop-filter: blur(12px);
                 -webkit-backdrop-filter: blur(12px);
-                border: 1px solid rgba(128, 128, 128, 0.2);
+                border: 1px solid rgba(255, 255, 255, 0.08);
                 border-radius: 10px;
-                padding: 12px 14px;
+                padding: 14px 16px;
                 margin-bottom: 14px;
             }
 
             /* Metric Containers Override */
             div[data-testid="stMetric"] {
-                background: rgba(128, 128, 128, 0.05) !important;
+                background: rgba(255, 255, 255, 0.04) !important;
                 backdrop-filter: blur(14px) saturate(180%) !important;
                 -webkit-backdrop-filter: blur(14px) saturate(180%) !important;
-                border: 1px solid rgba(128, 128, 128, 0.2) !important;
+                border: 1px solid rgba(255, 255, 255, 0.08) !important;
                 border-radius: 12px !important;
-                padding: 14px 18px !important;
-                box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.03) !important;
+                padding: 16px 20px !important;
+                box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.2) !important;
             }
             div[data-testid="stMetricLabel"] p {
-                font-size: 0.74rem !important;
+                font-size: 0.75rem !important;
                 font-weight: 600 !important;
                 text-transform: uppercase !important;
-                letter-spacing: 0.05em !important;
+                letter-spacing: 0.06em !important;
                 color: #94a3b8 !important;
             }
             div[data-testid="stMetricValue"] {
+                font-size: 1.85rem !important;
                 font-weight: 700 !important;
-                color: var(--text-color, #0f172a) !important;
+                color: #f8fafc !important;
                 letter-spacing: -0.02em !important;
             }
 
             /* Glass Tabs */
             div[data-testid="stTabs"] [data-baseweb="tab-list"] {
-                background: rgba(128, 128, 128, 0.08) !important;
+                background: rgba(255, 255, 255, 0.03) !important;
                 backdrop-filter: blur(10px) !important;
                 border-radius: 10px !important;
                 padding: 4px !important;
-                gap: 4px !important;
-                border: 1px solid rgba(128, 128, 128, 0.18) !important;
-                margin-bottom: 16px !important;
+                gap: 6px !important;
+                border: 1px solid rgba(255, 255, 255, 0.08) !important;
+                margin-bottom: 20px !important;
             }
             div[data-testid="stTabs"] [data-baseweb="tab"] {
                 border-radius: 8px !important;
-                padding: 8px 16px !important;
-                font-size: 0.86rem !important;
+                padding: 8px 18px !important;
+                font-size: 0.88rem !important;
                 font-weight: 500 !important;
-                color: var(--text-color, #475569) !important;
+                color: #94a3b8 !important;
                 border: none !important;
                 background: transparent !important;
                 transition: all 0.15s ease !important;
             }
+            div[data-testid="stTabs"] [data-baseweb="tab"]:hover {
+                color: #f8fafc !important;
+                background: rgba(255, 255, 255, 0.05) !important;
+            }
             div[data-testid="stTabs"] [aria-selected="true"] {
-                background: rgba(128, 128, 128, 0.2) !important;
-                color: var(--text-color, #0f172a) !important;
+                background: rgba(255, 255, 255, 0.12) !important;
+                color: #f8fafc !important;
                 font-weight: 600 !important;
-                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15) !important;
             }
 
             /* Glass Status Cards (Execution & Progress) */
             .glass-status-card {
-                background: rgba(128, 128, 128, 0.06);
+                background: rgba(255, 255, 255, 0.04);
                 backdrop-filter: blur(16px) saturate(180%);
                 -webkit-backdrop-filter: blur(16px) saturate(180%);
-                border: 1px solid rgba(128, 128, 128, 0.22);
+                border: 1px solid rgba(255, 255, 255, 0.08);
                 border-left: 3px solid #3b82f6 !important;
                 border-radius: 10px;
-                padding: 14px 18px;
-                margin-bottom: 14px;
-                box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.04);
+                padding: 16px 20px;
+                margin-bottom: 16px;
+                box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.2);
             }
             .glass-status-title {
-                font-size: 0.95rem;
+                font-size: 1.0rem;
                 font-weight: 600;
-                color: var(--text-color, #1e293b);
+                color: #f8fafc;
                 letter-spacing: -0.01em;
             }
             .glass-status-meta {
-                margin-top: 5px;
-                font-size: 0.86rem;
-                color: #94a3b8;
+                margin-top: 6px;
+                font-size: 0.88rem;
+                color: #cbd5e1;
             }
             .glass-status-detail {
                 margin-top: 4px;
-                font-size: 0.8rem;
-                color: #64748b;
+                font-size: 0.82rem;
+                color: #94a3b8;
             }
 
             /* Clean Expanders - Preserve summary & icons untouched */
             div[data-testid="stExpander"] {
-                background: rgba(128, 128, 128, 0.04) !important;
+                background: rgba(255, 255, 255, 0.03) !important;
                 backdrop-filter: blur(10px) !important;
-                border: 1px solid rgba(128, 128, 128, 0.18) !important;
+                border: 1px solid rgba(255, 255, 255, 0.08) !important;
                 border-radius: 10px !important;
-                margin-bottom: 12px !important;
+                margin-bottom: 14px !important;
             }
 
             /* Minimal Buttons */
             div.stButton > button {
                 border-radius: 8px !important;
-                font-weight: 500 !important;
-                font-size: 0.88rem !important;
+                font-weight: 600 !important;
+                font-size: 0.9rem !important;
                 letter-spacing: 0.01em !important;
+            }
+
+            /* Light theme support */
+            @media (prefers-color-scheme: light) {
+                .main-title { color: #0f172a; }
+                .sub-title { color: #475569; }
+                .workload-bar {
+                    background: rgba(0, 0, 0, 0.02);
+                    border: 1px solid rgba(0, 0, 0, 0.08);
+                }
+                .workload-label { color: #64748b; }
+                .workload-value { color: #0f172a; }
+                .workload-divider { background: rgba(0, 0, 0, 0.08); }
+                div[data-testid="stMetric"] {
+                    background: rgba(0, 0, 0, 0.02) !important;
+                    border: 1px solid rgba(0, 0, 0, 0.08) !important;
+                }
+                div[data-testid="stMetricLabel"] p { color: #64748b !important; }
+                div[data-testid="stMetricValue"] { color: #0f172a !important; }
+                div[data-testid="stTabs"] [data-baseweb="tab-list"] {
+                    background: rgba(0, 0, 0, 0.03) !important;
+                    border: 1px solid rgba(0, 0, 0, 0.06) !important;
+                }
+                div[data-testid="stTabs"] [data-baseweb="tab"] { color: #64748b !important; }
+                div[data-testid="stTabs"] [aria-selected="true"] {
+                    background: #ffffff !important;
+                    color: #0f172a !important;
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+                }
+                .glass-panel {
+                    background: rgba(0, 0, 0, 0.02);
+                    border: 1px solid rgba(0, 0, 0, 0.08);
+                }
+                .glass-status-card {
+                    background: rgba(0, 0, 0, 0.02);
+                    border: 1px solid rgba(0, 0, 0, 0.08);
+                    border-left: 3px solid #2563eb !important;
+                }
+                .glass-status-title { color: #0f172a; }
+                .glass-status-meta { color: #334155; }
+                .glass-status-detail { color: #64748b; }
             }
         </style>
     """, unsafe_allow_html=True)
@@ -1398,10 +1443,10 @@ def main():
         st.markdown("### Pilot Control Center")
         st.markdown(f"""
         <div class="glass-panel">
-            <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: #94a3b8; font-weight: 600;">Configuration</div>
-            <div style="font-size: 0.85rem; font-weight: 600; color: #1e293b; margin-top: 2px;">ASL_SR_DPT_FINAL</div>
-            <div style="font-size: 0.72rem; color: #64748b; font-family: monospace; margin-top: 6px;">Config: {CONFIG_HASH[:12]}...</div>
-            <div style="font-size: 0.72rem; color: #64748b; font-family: monospace; margin-top: 2px;">Code: {CODE_HASH[:12]}...</div>
+            <div style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.07em; color: #94a3b8; font-weight: 600;">Configuration</div>
+            <div style="font-size: 0.92rem; font-weight: 600; color: #f8fafc; margin-top: 3px;">ASL_SR_DPT_FINAL</div>
+            <div style="font-size: 0.75rem; color: #cbd5e1; font-family: ui-monospace, monospace; margin-top: 6px;">Config: <span style="color: #60a5fa;">{CONFIG_HASH[:12]}...</span></div>
+            <div style="font-size: 0.75rem; color: #cbd5e1; font-family: ui-monospace, monospace; margin-top: 3px;">Code: <span style="color: #a78bfa;">{CODE_HASH[:12]}...</span></div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -1421,14 +1466,14 @@ def main():
         st.markdown("### Certified Host Environment")
         env_info = get_environment_info()
         st.markdown(f"""
-        <div class="glass-panel" style="font-size: 0.8rem; line-height: 1.7;">
-            <div style="display: flex; justify-content: space-between;"><span style="color: #64748b;">OS:</span> <b>{platform.system()} {platform.release()}</b></div>
-            <div style="display: flex; justify-content: space-between;"><span style="color: #64748b;">Python:</span> <code>{env_info['python_version']}</code></div>
-            <div style="display: flex; justify-content: space-between;"><span style="color: #64748b;">NumPy:</span> <code>{env_info['numpy_version']}</code></div>
-            <div style="display: flex; justify-content: space-between;"><span style="color: #64748b;">SciPy:</span> <code>{env_info['scipy_version']}</code></div>
-            <div style="display: flex; justify-content: space-between;"><span style="color: #64748b;">Pandas:</span> <code>{env_info['pandas_version']}</code></div>
-            <div style="display: flex; justify-content: space-between;"><span style="color: #64748b;">OMP Threads:</span> <code>{env_info['thread_settings']['OMP_NUM_THREADS']}</code></div>
-            <div style="display: flex; justify-content: space-between;"><span style="color: #64748b;">MKL Threads:</span> <code>{env_info['thread_settings']['MKL_NUM_THREADS']}</code></div>
+        <div class="glass-panel" style="font-size: 0.82rem; line-height: 1.85;">
+            <div style="display: flex; justify-content: space-between;"><span style="color: #94a3b8;">OS:</span> <b style="color: #f8fafc;">{platform.system()} {platform.release()}</b></div>
+            <div style="display: flex; justify-content: space-between;"><span style="color: #94a3b8;">Python:</span> <code style="color: #34d399;">{env_info['python_version']}</code></div>
+            <div style="display: flex; justify-content: space-between;"><span style="color: #94a3b8;">NumPy:</span> <code style="color: #34d399;">{env_info['numpy_version']}</code></div>
+            <div style="display: flex; justify-content: space-between;"><span style="color: #94a3b8;">SciPy:</span> <code style="color: #34d399;">{env_info['scipy_version']}</code></div>
+            <div style="display: flex; justify-content: space-between;"><span style="color: #94a3b8;">Pandas:</span> <code style="color: #34d399;">{env_info['pandas_version']}</code></div>
+            <div style="display: flex; justify-content: space-between;"><span style="color: #94a3b8;">OMP Threads:</span> <code style="color: #38bdf8;">{env_info['thread_settings']['OMP_NUM_THREADS']}</code></div>
+            <div style="display: flex; justify-content: space-between;"><span style="color: #94a3b8;">MKL Threads:</span> <code style="color: #38bdf8;">{env_info['thread_settings']['MKL_NUM_THREADS']}</code></div>
         </div>
         """, unsafe_allow_html=True)
         st.caption("Single-threaded execution verified.")
@@ -1577,7 +1622,7 @@ def main():
                             Step {run_num} of {total_runs}: {solver} (Execution {sub_run}/2)
                         </div>
                         <div class="glass-status-meta">
-                            <b>Overall Progress:</b> <span style="color: #2563eb; font-weight: 600;">{overall_pct:.1f}%</span> &nbsp;|&nbsp; 
+                            <b>Overall Progress:</b> <span style="color: #60a5fa; font-weight: 600;">{overall_pct:.1f}%</span> &nbsp;|&nbsp; 
                             <b>Current Patch:</b> <span style="font-weight: 600;">{p_cur:,} / {p_tot:,}</span> ({patch_pct:.1f}%)
                         </div>
                         <div class="glass-status-detail">
