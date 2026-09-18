@@ -1437,6 +1437,10 @@ def main():
         st.session_state.reproducibility_results = []
     if "benchmark_running" not in st.session_state:
         st.session_state.benchmark_running = False
+    if "benchmark_in_loop" not in st.session_state:
+        st.session_state.benchmark_in_loop = False
+    if "pause_requested" not in st.session_state:
+        st.session_state.pause_requested = False
 
     # Sidebar setup
     with st.sidebar:
@@ -1753,25 +1757,74 @@ def main():
 
         st.progress(completed_count / float(total_tasks))
 
+        # Ensure session state is reset when rendering idle outside the execution loop
+        if not st.session_state.get("benchmark_in_loop", False):
+            st.session_state.benchmark_running = False
+
+        pause_file = os.path.join(paths["base"], ".pause_requested")
+
+        # Visual status indicator if workload was paused mid-stream
+        if 0 < completed_count < total_tasks and not st.session_state.benchmark_running:
+            next_task = remaining_tasks[0]
+            st.markdown(f"""
+            <div class="glass-status-card" style="border-left: 3px solid #38bdf8 !important; padding: 12px 18px; margin-bottom: 14px;">
+                <div style="color: #f8fafc; font-weight: 600; font-size: 0.95rem;">
+                    Workload Paused at {completed_count} / {total_tasks} Evaluations ({(completed_count / total_tasks) * 100:.1f}%)
+                </div>
+                <div style="color: #cbd5e1; font-size: 0.84rem; margin-top: 3px;">
+                    Ready to resume. Next pending evaluation ({completed_count + 1} of {total_tasks}): <b>{next_task[3]}</b> on image <code>{next_task[0]}</code> (σ={int(next_task[1])}, Trial {next_task[2]}).
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
         # Control area
         can_start = (len(remaining_tasks) > 0) and all_gates_pass
-        btn_label = "Start Benchmark Workload" if completed_count == 0 else "Resume Benchmark Workload"
+        btn_label = "Start Benchmark Workload" if completed_count == 0 else f"Resume Benchmark Workload ({completed_count + 1}/{total_tasks})"
 
-        start_clicked = st.button(
-            btn_label,
-            disabled=(not can_start or st.session_state.benchmark_running),
-            type="primary",
-            use_container_width=True,
-        )
+        col_ctrl1, col_ctrl2 = st.columns([3, 2])
+        with col_ctrl1:
+            start_clicked = st.button(
+                btn_label,
+                disabled=(not can_start or st.session_state.benchmark_running),
+                type="primary",
+                use_container_width=True,
+            )
+        with col_ctrl2:
+            pause_pending = os.path.exists(pause_file) or st.session_state.get("pause_requested", False)
+            if st.session_state.benchmark_running:
+                if st.button("Pause After Current Task", type="secondary", use_container_width=True):
+                    st.session_state.pause_requested = True
+                    try:
+                        with open(pause_file, "w", encoding="utf-8") as pf:
+                            pf.write("pause")
+                    except OSError:
+                        pass
+                    st.toast("Pause requested. The solver will finish the active evaluation and halt cleanly.")
+            elif pause_pending:
+                if st.button("Clear Pause Request", type="secondary", use_container_width=True):
+                    st.session_state.pause_requested = False
+                    if os.path.exists(pause_file):
+                        try:
+                            os.remove(pause_file)
+                        except OSError:
+                            pass
+                    st.rerun()
 
         st.caption(
             "**Interruption & Resumption Safety:** Every completed evaluation is flushed atomically to disk. "
-            "To pause, close the terminal or browser. Clicking Resume will automatically pick up from the next pending task."
+            "You can pause at any time; clicking Resume will automatically pick up from the next pending task without loss of data."
         )
 
         # Live Execution Loop
         if start_clicked:
             st.session_state.benchmark_running = True
+            st.session_state.benchmark_in_loop = True
+            st.session_state.pause_requested = False
+            if os.path.exists(pause_file):
+                try:
+                    os.remove(pause_file)
+                except OSError:
+                    pass
 
             progress_bar = st.progress(completed_count / float(total_tasks))
             status_placeholder = st.empty()
@@ -1779,68 +1832,100 @@ def main():
             img_preview_col1, img_preview_col2 = st.columns(2)
 
             evals_done_session = 0
+            paused_cleanly = False
 
-            for idx, (img_id, noise_sigma, trial, solver_name) in enumerate(task_list):
-                key = (img_id, noise_sigma, trial, solver_name)
-                if key in existing_keys:
-                    continue
+            try:
+                for idx, (img_id, noise_sigma, trial, solver_name) in enumerate(task_list):
+                    key = (img_id, noise_sigma, trial, solver_name)
+                    if key in existing_keys:
+                        continue
 
-                def dash_patch_cb(p_cur, p_tot, p_msg):
-                    p_pct = (p_cur / float(p_tot)) * 100.0
-                    sub_eval_pct = ((completed_count + evals_done_session + (p_cur / float(p_tot))) / float(total_tasks)) * 100.0
-                    status_placeholder.markdown(f"""
-                        <div class="glass-status-card">
-                            <div class="glass-status-title">
-                                Execution {completed_count + evals_done_session + 1} / {total_tasks}: {solver_name}
+                    # Check for graceful pause request before starting next evaluation
+                    if st.session_state.get("pause_requested", False) or os.path.exists(pause_file):
+                        st.session_state.pause_requested = False
+                        if os.path.exists(pause_file):
+                            try:
+                                os.remove(pause_file)
+                            except OSError:
+                                pass
+                        paused_cleanly = True
+                        break
+
+                    def dash_patch_cb(p_cur, p_tot, p_msg):
+                        p_pct = (p_cur / float(p_tot)) * 100.0
+                        sub_eval_pct = ((completed_count + evals_done_session + (p_cur / float(p_tot))) / float(total_tasks)) * 100.0
+                        status_placeholder.markdown(f"""
+                            <div class="glass-status-card">
+                                <div class="glass-status-title">
+                                    Execution {completed_count + evals_done_session + 1} / {total_tasks}: {solver_name}
+                                </div>
+                                <div class="glass-status-meta">
+                                    Image: <code>{img_id}</code> &nbsp;|&nbsp; Noise: <code>σ={int(noise_sigma)}</code> &nbsp;|&nbsp; Trial: <code>{trial}</code>
+                                </div>
+                                <div class="glass-status-detail">
+                                    Patch Progress: <b>{p_cur:,} / {p_tot:,}</b> ({p_pct:.1f}%) &nbsp;|&nbsp; 
+                                    Overall Workload: <b>{sub_eval_pct:.1f}%</b>
+                                </div>
                             </div>
-                            <div class="glass-status-meta">
-                                Image: <code>{img_id}</code> &nbsp;|&nbsp; Noise: <code>σ={int(noise_sigma)}</code> &nbsp;|&nbsp; Trial: <code>{trial}</code>
-                            </div>
-                            <div class="glass-status-detail">
-                                Patch Progress: <b>{p_cur:,} / {p_tot:,}</b> ({p_pct:.1f}%) &nbsp;|&nbsp; 
-                                Overall Workload: <b>{sub_eval_pct:.1f}%</b>
-                            </div>
-                        </div>
-                    """, unsafe_allow_html=True)
+                        """, unsafe_allow_html=True)
 
-                try:
-                    record, rec_img, noisy_img, _ = execute_single_pilot_evaluation(
-                        img_id, noise_sigma, trial, solver_name, selected_team, PILOT_CONFIG, CONFIG_HASH, CODE_HASH,
-                        patch_callback=dash_patch_cb
-                    )
-                    append_evaluation_record(paths["raw_csv"], record)
-                    existing_keys.add(key)
-                    evals_done_session += 1
+                    try:
+                        record, rec_img, noisy_img, _ = execute_single_pilot_evaluation(
+                            img_id, noise_sigma, trial, solver_name, selected_team, PILOT_CONFIG, CONFIG_HASH, CODE_HASH,
+                            patch_callback=dash_patch_cb
+                        )
+                        append_evaluation_record(paths["raw_csv"], record)
+                        existing_keys.add(key)
+                        evals_done_session += 1
 
-                    # Live visual preview
-                    with img_preview_col1:
-                        st.image(noisy_img, caption=f"Noisy Input ({img_id}, σ={int(noise_sigma)})", clamp=True)
-                    with img_preview_col2:
-                        st.image(rec_img, caption=f"Reconstruction ({solver_name}, PSNR: {record['psnr']} dB)", clamp=True)
+                        # Live visual preview
+                        with img_preview_col1:
+                            st.image(noisy_img, caption=f"Noisy Input ({img_id}, σ={int(noise_sigma)})", clamp=True)
+                        with img_preview_col2:
+                            st.image(rec_img, caption=f"Reconstruction ({solver_name}, PSNR: {record['psnr']} dB)", clamp=True)
 
-                except Exception as exc:
-                    log_failure_record(paths["failures_csv"], {
-                        "image_id": img_id,
-                        "noise": noise_sigma,
-                        "trial": trial,
-                        "solver": solver_name,
-                        "error_type": type(exc).__name__,
-                        "error_message": str(exc),
-                        "timestamp": datetime.now().isoformat(),
-                    })
+                    except Exception as exc:
+                        log_failure_record(paths["failures_csv"], {
+                            "image_id": img_id,
+                            "noise": noise_sigma,
+                            "trial": trial,
+                            "solver": solver_name,
+                            "error_type": type(exc).__name__,
+                            "error_message": str(exc),
+                            "timestamp": datetime.now().isoformat(),
+                        })
 
-                # Update progress
-                current_total_done = completed_count + evals_done_session
-                progress_bar.progress(current_total_done / float(total_tasks))
+                    # Update progress
+                    current_total_done = completed_count + evals_done_session
+                    progress_bar.progress(current_total_done / float(total_tasks))
 
-                # Display latest table
-                if os.path.exists(paths["raw_csv"]):
-                    latest_df = pd.read_csv(paths["raw_csv"])
-                    recent_table_placeholder.dataframe(
-                        latest_df.tail(5)[["image_id", "noise_sigma", "trial", "solver", "psnr", "ssim", "solve_time", "ms_per_patch"]]
-                    )
+                    # Display latest table
+                    if os.path.exists(paths["raw_csv"]):
+                        latest_df = pd.read_csv(paths["raw_csv"])
+                        recent_table_placeholder.dataframe(
+                            latest_df.tail(5)[["image_id", "noise_sigma", "trial", "solver", "psnr", "ssim", "solve_time", "ms_per_patch"]]
+                        )
 
-            st.session_state.benchmark_running = False
+                    # Check for graceful pause request immediately after evaluation finishes
+                    if st.session_state.get("pause_requested", False) or os.path.exists(pause_file):
+                        st.session_state.pause_requested = False
+                        if os.path.exists(pause_file):
+                            try:
+                                os.remove(pause_file)
+                            except OSError:
+                                pass
+                        paused_cleanly = True
+                        break
+
+            finally:
+                st.session_state.benchmark_running = False
+                st.session_state.benchmark_in_loop = False
+
+            if paused_cleanly:
+                st.info(f"Benchmark paused cleanly at evaluation {completed_count + evals_done_session} of {total_tasks}. Ready to resume.")
+                time.sleep(1)
+                st.rerun()
+
             if len(existing_keys) == total_tasks:
                 gates_dict = {
                     "Gate 1 (Environment)": g1_pass,
