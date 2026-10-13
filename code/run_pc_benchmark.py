@@ -569,7 +569,7 @@ def evaluate_single_task(task_spec):
             rec_thetas_b = np.empty((num_patches, 64), dtype=float)
             for p_idx in range(num_patches):
                 y_p = Y_std[p_idx]
-                sol_p, _ = run_omp(A_std, y_p, max_coefficients=38, rel_tol=1e-5, precomputed=pre_omp)
+                sol_p = run_omp(A_std, y_p, max_coefficients=38, relative_residual_tol=1e-5, precomputed=pre_omp)
                 rec_thetas_b[p_idx] = sol_p
 
             rec_patch_records = []
