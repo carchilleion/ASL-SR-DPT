@@ -558,35 +558,35 @@ if active_partition in ("pc1", "pc2", "pc3"):
 
                         with c_cols[0]:
                             if os.path.exists(clean_path):
-                                st.image(clean_path, caption="Clean Ground Truth", use_column_width=True)
+                                st.image(clean_path, caption="Clean Ground Truth", use_container_width=True)
                             else:
                                 st.caption("Clean image pending")
 
                         with c_cols[1]:
                             p = os.path.join(recon_dir, noisy_f)
                             if os.path.exists(p):
-                                st.image(p, caption=f"Noisy Input (sigma={n_val})", use_column_width=True)
+                                st.image(p, caption=f"Noisy Input (sigma={n_val})", use_container_width=True)
                             else:
                                 st.caption("Noisy pending")
 
                         with c_cols[2]:
                             p = os.path.join(recon_dir, asl_f)
                             if os.path.exists(p):
-                                st.image(p, caption="Noise-Adaptive ASL", use_column_width=True)
+                                st.image(p, caption="Noise-Adaptive ASL", use_container_width=True)
                             else:
                                 st.caption("ASL pending")
 
                         with c_cols[3]:
                             p = os.path.join(recon_dir, omp_f)
                             if os.path.exists(p):
-                                st.image(p, caption="Canonical OMP", use_column_width=True)
+                                st.image(p, caption="Canonical OMP", use_container_width=True)
                             else:
                                 st.caption("OMP pending")
 
                         with c_cols[4]:
                             p = os.path.join(recon_dir, admm_f)
                             if os.path.exists(p):
-                                st.image(p, caption="LASSO-ADMM", use_column_width=True)
+                                st.image(p, caption="LASSO-ADMM", use_container_width=True)
                             else:
                                 st.caption("ADMM pending")
             else:
@@ -702,9 +702,9 @@ else:
         if os.path.exists(psnr_plot) and os.path.exists(time_plot):
             c_p1, c_p2 = st.columns(2)
             with c_p1:
-                st.image(psnr_plot, caption="Reconstruction Quality (PSNR/SSIM) vs. Noise Regime", use_column_width=True)
+                st.image(psnr_plot, caption="Reconstruction Quality (PSNR/SSIM) vs. Noise Regime", use_container_width=True)
             with c_p2:
-                st.image(time_plot, caption="Runtime Distribution Across 68 Images", use_column_width=True)
+                st.image(time_plot, caption="Runtime Distribution Across 68 Images", use_container_width=True)
 
     with m_tab3:
         st.markdown("#### Complete Benchmark Archive")
