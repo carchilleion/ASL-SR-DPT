@@ -1,0 +1,19 @@
+{
+  "benchmark_name": "ASL_SR_DPT_FINAL_BSD68_BENCHMARK_3PC_DISTRIBUTED",
+  "partition_id": "pc1",
+  "expected_evaluations": 10200,
+  "completed_evaluations": 0,
+  "successful_evaluations": 0,
+  "remaining_evaluations": 10200,
+  "failed_attempts": 0,
+  "permanent_failures": 0,
+  "percent_complete": 0.0,
+  "requested_cpu_workers": 10,
+  "available_cpu_workers": 16,
+  "actual_cpu_workers": 10,
+  "elapsed_seconds": 0.0,
+  "evaluations_per_minute": 0.0,
+  "estimated_remaining_seconds": 0.0,
+  "last_updated": "2026-10-14T00:55:20.568758",
+  "status": "IN_PROGRESS"
+}

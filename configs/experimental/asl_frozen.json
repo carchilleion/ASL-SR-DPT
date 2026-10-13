@@ -1,0 +1,21 @@
+{
+  "config_name": "ASL_FROZEN",
+  "parent_config": "configs/pilot_config.json",
+  "sensing_mode": "dc_preserving",
+  "lambda_reg": 0.1,
+  "sigma_min": 0.01,
+  "sigma_decay": 0.95,
+  "max_iter": 150,
+  "tol": 1e-05,
+  "initial_mu": 0.2,
+  "armijo_c": 0.0001,
+  "beta_decay": 0.5,
+  "max_backtracks": 10,
+  "support_threshold_multiplier": 1e-05,
+  "support_reopen_interval": 3,
+  "use_midpoint": true,
+  "M_ac": 37,
+  "N_ac": 63,
+  "patch_size": 8,
+  "stride": 2
+}

@@ -52,3 +52,33 @@ results/team_b/reconstructions/*
 # Merged output directory
 results/pilot_combined/*
 !results/pilot_combined/.gitkeep
+
+# Distributed benchmark local transient flags and logs
+**/.runner_pid
+**/.pause_requested
+*.runner_pid
+*.pause_requested
+**/live_terminal.log
+**/live_preview_*.png
+**/live_preview_*.json
+scratch/
+
+# Local experiment archives and scratch diagnostics
+results/archive_*
+results/diagnostics/
+results/pilot_final_comparison/
+results/new_variant_pilot/reconstructions/*
+!results/new_variant_pilot/reconstructions/.gitkeep
+results/final_benchmark/reconstructions/
+results/final_benchmark/raw_results.csv
+results/final_benchmark/aggregated_image_level.csv
+results/final_benchmark/benchmark_integrity_report.md
+results/final_benchmark/benchmark_manifest.json
+results/final_benchmark/descriptive_statistics.csv
+results/final_benchmark/final_benchmark_report.md
+results/final_benchmark/final_result_preview*.png
+results/final_benchmark/pairwise_statistics.csv
+
+
+
+
