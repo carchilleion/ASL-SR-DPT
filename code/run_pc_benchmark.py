@@ -834,6 +834,11 @@ def run_partition(partition_id, max_cpu_workers=None, save_images="all",
     error_csv_path = os.path.join(output_dir, "error_log.csv")
     manifest_path = os.path.join(output_dir, "benchmark_manifest.json")
     pause_file_path = os.path.join(output_dir, ".pause_requested")
+    if os.path.exists(pause_file_path):
+        try:
+            os.remove(pause_file_path)
+        except Exception:
+            pass
     live_log_path = os.path.join(output_dir, "live_terminal.log")
     recon_dir = os.path.join(output_dir, "reconstructions")
     os.makedirs(recon_dir, exist_ok=True)
